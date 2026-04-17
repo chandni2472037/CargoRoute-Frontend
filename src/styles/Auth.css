@@ -1,0 +1,161 @@
+.auth-container {
+  display: flex;
+  height: 100vh;
+}
+
+/* LEFT SIDE */
+.auth-left {
+  flex: 1;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: white;
+  padding: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-left h1 {
+  font-size: 44px;
+  margin-bottom: 20px;
+}
+
+.auth-left p {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.auth-left ul {
+  list-style: none;
+}
+
+.auth-left li {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+/* RIGHT SIDE */
+.auth-right {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-card {
+  background: white;
+  width: 420px;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.auth-card h2 {
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.auth-card input,
+.auth-card select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.auth-card button {
+  width: 100%;
+  padding: 12px;
+  background: #3b82f6;
+  color: white;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.auth-card button:hover {
+  background: #2563eb;
+}
+
+.link {
+  display: block;
+  margin-top: 15px;
+  text-align: center;
+}
+
+/* Inline feedback messages */
+.auth-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.auth-message-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.auth-message-success {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+/* ================================================================
+   RESPONSIVE — Auth
+   ================================================================ */
+
+/* ── Tablet (≤ 900px): shrink left panel ─────────────────────── */
+@media (max-width: 900px) {
+  .auth-left {
+    padding: 48px 40px;
+    flex: 0 0 40%;
+  }
+
+  .auth-left h1 {
+    font-size: 32px;
+  }
+
+  .auth-left p,
+  .auth-left li {
+    font-size: 15px;
+  }
+}
+
+/* ── Mobile (≤ 640px): stack vertically, hide left panel ─────── */
+@media (max-width: 640px) {
+  .auth-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .auth-left {
+    display: none;
+  }
+
+  .auth-right {
+    flex: 1;
+    align-items: flex-start;
+    padding: 32px 16px;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 28px 20px;
+    box-shadow: none;
+    border: 1px solid #e4e7ed;
+  }
+}
