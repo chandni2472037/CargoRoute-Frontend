@@ -49,6 +49,19 @@ const NAV_ITEMS = [
       { label: 'File Claim',       path: '/claims/new' },
     ],
   },
+
+  {
+    label: 'User Management',
+    icon: '👥',
+    path: '/admin/users',
+    adminOnly: true
+  },
+  {
+    label: 'My Profile',
+    icon: '🙍',
+    path: '/profile'
+  }
+
 ];
 
 export default function Layout({ children }) {
@@ -89,7 +102,9 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) =>
+          {NAV_ITEMS
+          .filter(item => !item.adminOnly || user?.role === "Admin")
+          .map((item) =>
             item.children ? (
               <div key={item.path}>
                 <div
@@ -158,10 +173,14 @@ export default function Layout({ children }) {
           </div>
 
           <div className="header-right">
-            <button className="header-icon-btn" title="Notifications">
-              <span role="img" aria-label="bell">🔔</span>
-              <span className="badge">2</span>
-            </button>
+            <button
+  className="header-icon-btn"
+  title="Notifications"
+  onClick={() => navigate("/notifications")}
+>
+  <span role="img" aria-label="bell">🔔</span>
+  <span className="badge">2</span>
+</button>
             <button className="header-icon-btn" title="Tasks">
               <span role="img" aria-label="tasks">📋</span>
               <span className="badge">3</span>

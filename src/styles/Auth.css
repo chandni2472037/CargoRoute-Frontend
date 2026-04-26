@@ -69,10 +69,11 @@
 
 .auth-card button {
   width: 100%;
-  padding: 12px;
+  padding: 8px 14px;
   background: #3b82f6;
   color: white;
-  font-size: 16px;
+  font-size: 14px;
+  height: 36px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -85,8 +86,10 @@
 .link {
   display: block;
   margin-top: 15px;
-  text-align: center;
+  text-align: right;
+  font-size: 13px;
 }
+
 
 /* Inline feedback messages */
 .auth-message {
@@ -158,4 +161,12 @@
     box-shadow: none;
     border: 1px solid #e4e7ed;
   }
+}
+
+
+.auth-card input,
+.auth-card select {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
 }

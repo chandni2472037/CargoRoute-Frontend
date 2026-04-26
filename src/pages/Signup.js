@@ -85,7 +85,7 @@ export default function Signup() {
           )}
 
           <button type="submit" disabled={loading}>
-            {loading ? 'Creating account…' : 'Create Account'}
+            {loading ? 'Creating account…' : 'Create'}
           </button>
 
           <span className="link">

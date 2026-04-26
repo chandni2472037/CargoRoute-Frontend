@@ -21,8 +21,22 @@ import NewClaim        from "./pages/exceptions/NewClaim";
 import AuthProvider    from "./auth/AuthContext";
 import ProtectedRoute  from "./auth/ProtectedRoute";
 
+
+
+
+
+//Notifications
+import Notifications from "./pages/notifications/Notifications";
+import UsersPage from "./pages/users/UsersPage";
+import Profile from "./pages/users/Profile";
+import Dashboard from "./pages/Dashboard";
+
+
 const BOOKING_ROLES   = ["Admin", "Dispatcher", "Shipper", "Analyst"];
 const EXCEPTION_ROLES = ["Admin", "Dispatcher", "Analyst"];
+
+
+
 
 export default function App() {
   return (
@@ -36,7 +50,10 @@ export default function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Default redirect */}
-          <Route path="/" element={<Navigate to="/bookings" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}/>
+
 
           {/* ── Booking & Order Intake ── */}
           <Route path="/bookings" element={<ProtectedRoute roles={BOOKING_ROLES}><BookingsList /></ProtectedRoute>} />
@@ -51,6 +68,25 @@ export default function App() {
           <Route path="/claims" element={<ProtectedRoute roles={EXCEPTION_ROLES}><ClaimsList /></ProtectedRoute>} />
           <Route path="/claims/new" element={<ProtectedRoute roles={EXCEPTION_ROLES}><NewClaim /></ProtectedRoute>} />
           <Route path="/claims/:id" element={<ProtectedRoute roles={EXCEPTION_ROLES}><ClaimDetail /></ProtectedRoute>} />
+
+          {/* Profile – all users */}
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>}/>
+
+          {/* User Management – ADMIN only */}
+          <Route path="/admin/users" element={<ProtectedRoute role="Admin"><UsersPage /></ProtectedRoute>}/>
+  
+
+
+          
+<Route
+  path="/notifications"
+  element={
+    <ProtectedRoute>
+      <Notifications />
+    </ProtectedRoute>
+  }
+/>
+
 
         </Routes>
       </BrowserRouter>

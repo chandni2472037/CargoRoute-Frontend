@@ -1,0 +1,77 @@
+.notifications-page {
+  padding: 20px;
+}
+
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.notifications-header p {
+  color: #6b7280;
+}
+
+.notification-actions button {
+  margin-left: 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.notification-actions .danger {
+  color: #b91c1c;
+}
+
+.notification-section {
+  margin-top: 20px;
+}
+
+.notification-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #f9fafb;
+  margin-bottom: 10px;
+}
+
+.notification-card.unread {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+}
+
+.dot.pickup { background: #3b82f6; }
+.dot.exception { background: #ef4444; }
+.dot.delivery { background: #10b981; }
+.dot.invoice { background: #f59e0b; }
+
+.content {
+  flex: 1;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.check {
+  color: #2563eb;
+}
