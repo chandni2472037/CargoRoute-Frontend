@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import { AuthContext } from '../../auth/AuthContext';
 import { getAllShippers, createShipper, updateShipper } from '../../api/bookingsApi';
 import { SHIPPER_STATUS_CONFIG as STATUS_CONFIG } from '../../utils/constants';
+import { exportCSV } from '../../utils/csvExport';
 import '../../styles/Bookings.css';
 
 const EMPTY_FORM = { name: '', contactInfo: '', accountTerms: '', status: 'ACTIVE' };
@@ -19,6 +22,8 @@ export default function ShippersList() {
   const [error, setError]           = useState('');
   const [showForm, setShowForm]     = useState(false);
   const [editId, setEditId]         = useState(null);
+  const [viewMode, setViewMode]     = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
   const [form, setForm]             = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving]         = useState(false);
@@ -35,7 +40,15 @@ export default function ShippersList() {
 
   useEffect(loadShippers, []);
 
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+
   const openAddForm = () => {
+    // Admins should navigate to dedicated page instead of inline modal
+    if (user?.role === 'Admin') {
+      navigate('/shippers/new');
+      return;
+    }
     setEditId(null);
     setForm(EMPTY_FORM);
     setFormErrors({});
@@ -43,7 +56,7 @@ export default function ShippersList() {
     setShowForm(true);
   };
 
-  const openEditForm = (s) => {
+  const openEditForm = (s, mode = 'edit') => {
     setEditId(s.shipperID);
     setForm({
       name:         s.name         || '',
@@ -53,7 +66,14 @@ export default function ShippersList() {
     });
     setFormErrors({});
     setMessage({ type: '', text: '' });
+    setViewMode(mode === 'view');
     setShowForm(true);
+    setOpenMenuId(null);
+  };
+
+  const handleView = (shipper) => {
+    // Navigate to dedicated detail page instead of inline modal
+    navigate(`/shippers/${shipper.shipperID}`);
   };
 
   const handleChange = (e) => {
@@ -103,14 +123,16 @@ export default function ShippersList() {
             <h1 className="page-title">Shippers</h1>
             <p className="page-subtitle">Manage registered shipper accounts</p>
           </div>
-          <button
-            className="btn-primary"
-            title="Add Shipper"
-            onClick={openAddForm}
-            style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}
-          >
-            +
-          </button>
+          {user?.role === 'Admin' && (
+            <button
+              className="btn-primary"
+              title="Add Shipper"
+              onClick={openAddForm}
+              style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}
+            >
+              +
+            </button>
+          )}
         </div>
 
         {/* ── Error banner ────────────────────────────────── */}
@@ -124,7 +146,7 @@ export default function ShippersList() {
         {showForm && (
           <div className="shipper-form-card">
             <div className="shipper-form-header">
-              <h2>{editId ? '✏️ Edit Shipper' : '➕ Add New Shipper'}</h2>
+              <h2>{viewMode ? '👁 View Shipper' : (editId ? '✏️ Edit Shipper' : '➕ Add New Shipper')}</h2>
               <button className="form-close-btn" onClick={() => setShowForm(false)} title="Close">✕</button>
             </div>
             <form onSubmit={handleSubmit} noValidate>
@@ -136,6 +158,7 @@ export default function ShippersList() {
                       type="text" name="name" value={form.name} onChange={handleChange}
                       placeholder="Company or shipper name"
                       className={formErrors.name ? 'input-error' : ''}
+                      disabled={viewMode}
                     />
                     {formErrors.name && <span className="error-msg">{formErrors.name}</span>}
                   </div>
@@ -144,6 +167,7 @@ export default function ShippersList() {
                     <input
                       type="text" name="contactInfo" value={form.contactInfo} onChange={handleChange}
                       placeholder="Email address or phone number"
+                      disabled={viewMode}
                     />
                   </div>
                 </div>
@@ -155,6 +179,7 @@ export default function ShippersList() {
                   <input
                     type="text" name="accountTerms" value={form.accountTerms} onChange={handleChange}
                     placeholder="e.g., NET30, PREPAID, COD"
+                    disabled={viewMode}
                   />
                 </div>
 
@@ -165,12 +190,20 @@ export default function ShippersList() {
                 )}
 
                 <div className="shipper-form-actions">
-                  <button type="submit" className="btn-primary" disabled={saving}>
-                    {saving ? 'Saving…' : (editId ? 'Update' : '+ Add')}
-                  </button>
-                  <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
-                    Cancel
-                  </button>
+                  {!viewMode ? (
+                    <>
+                      <button type="submit" className="btn-primary" disabled={saving}>
+                        {saving ? 'Saving…' : (editId ? 'Update' : '+ Add')}
+                      </button>
+                      <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
+                      Close
+                    </button>
+                  )}
                 </div>
               </div>
             </form>
@@ -213,7 +246,6 @@ export default function ShippersList() {
             </div>
             <div className="toolbar-right">
               <div className="filter-wrapper">
-                <span>🏷️</span>
                 <select
                   className="status-select"
                   value={search}
@@ -225,6 +257,11 @@ export default function ShippersList() {
                   <option value="SUSPENDED">Suspended</option>
                 </select>
               </div>
+              <button className="btn-export" onClick={() => {
+                const headers = ['Name','Contact Info','Account Terms','Status'];
+                const rows = filtered.map((s) => [s.name, s.contactInfo || '', s.accountTerms || '', s.status]);
+                exportCSV('shippers.csv', headers, rows);
+              }}>⬇ Export</button>
             </div>
           </div>
 
@@ -246,9 +283,11 @@ export default function ShippersList() {
                   {filtered.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="empty-state">
-                        {shippers.length === 0
-                          ? 'No shippers yet. Click + Add Shipper to create the first one.'
-                          : 'No shippers match your search.'}
+                          {shippers.length === 0
+                            ? (user?.role === 'Admin'
+                              ? 'No shippers yet. Click + Add Shipper to create the first one.'
+                              : 'No shippers available to display.')
+                            : 'No shippers match your search.'}
                       </td>
                     </tr>
                   ) : (
@@ -262,10 +301,24 @@ export default function ShippersList() {
                           <td>
                             <span className={`status-badge ${sc.cls}`}>{sc.label}</span>
                           </td>
-                          <td>
-                            <button className="btn-view" onClick={() => openEditForm(s)}>
-                              Edit
+                          <td style={{ position: 'relative' }}>
+                            <button
+                              className="icon-btn"
+                              aria-haspopup="true"
+                              aria-expanded={openMenuId === s.shipperID}
+                              onClick={() => setOpenMenuId(openMenuId === s.shipperID ? null : s.shipperID)}
+                              title="Actions"
+                            >
+                              ⋮
                             </button>
+                            {openMenuId === s.shipperID && (
+                              <div className="row-action-menu" style={{ position: 'absolute', right: 0, top: '28px', background: '#fff', border: '1px solid #e6eef8', borderRadius: 8, boxShadow: '0 6px 18px rgba(15,23,42,0.08)', zIndex: 40 }}>
+                                <button className="menu-item" onClick={() => handleView(s)}>View</button>
+                                {user?.role === 'Admin' && (
+                                  <button className="menu-item" onClick={() => navigate(`/shippers/${s.shipperID}/edit`)}>Edit</button>
+                                )}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );

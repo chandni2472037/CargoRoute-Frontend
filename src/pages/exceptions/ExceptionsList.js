@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import { getAllExceptions } from '../../api/exceptionsApi';
+import { AuthContext } from '../../auth/AuthContext';
+import { getAllExceptions, resolveUserById } from '../../api/exceptionsApi';
 import {
   EXCEPTION_TYPE_CONFIG,
   EXCEPTION_STATUS_CONFIG,
 } from '../../utils/constants';
+import { exportCSV } from '../../utils/csvExport';
 import '../../styles/Bookings.css';
 import '../../styles/Exceptions.css';
+import Pagination from '../../components/Pagination';
 
 // ── Formatters ──────────────────────────────────────────────────────────────
 
@@ -34,6 +37,7 @@ function formatDateTime(dt) {
 
 export default function ExceptionsList() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const [exceptions, setExceptions] = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -41,9 +45,11 @@ export default function ExceptionsList() {
   const [search, setSearch]         = useState('');
   const [typeFilter, setTypeFilter]     = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [reporterNames, setReporterNames] = useState({});
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 4;
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   // ── Data loading ────────────────────────────────────────────────────────
 
@@ -59,6 +65,19 @@ export default function ExceptionsList() {
   }, []);
 
   useEffect(() => { loadExceptions(); }, [loadExceptions]);
+
+  // Batch-resolve reporter names whenever the exceptions list changes
+  useEffect(() => {
+    if (exceptions.length === 0) return;
+    const uniqueIds = [...new Set(
+      exceptions.map((item) => item.exceptiondto?.reportedBy).filter(Boolean)
+    )];
+    uniqueIds.forEach((id) => {
+      resolveUserById(id).then((name) =>
+        setReporterNames((prev) => ({ ...prev, [id]: name }))
+      );
+    });
+  }, [exceptions]);
 
   // Reset to first page whenever search/filter changes
   useEffect(() => { setCurrentPage(1); }, [search, typeFilter, statusFilter]);
@@ -100,7 +119,7 @@ export default function ExceptionsList() {
       <div className="bookings-page exceptions-page">
 
         {/* ── Page Header ── */}
-        <div className="page-header">
+          <div className="page-header">
           <div>
             <div className="page-title-group">
               <span className="page-title-icon">⚠️</span>
@@ -110,14 +129,16 @@ export default function ExceptionsList() {
               Track and manage freight exceptions, delays and incidents
             </p>
           </div>
-          <button
-            className="btn-primary"
-            title="Report Exception"
-            onClick={() => navigate('/exceptions/new')}
-            style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}
-          >
-            +
-          </button>
+          {(user?.role === 'Shipper' || user?.role === 'Dispatcher') && (
+            <button
+              className="btn-primary"
+              title="Report Exception"
+              onClick={() => navigate('/exceptions/new')}
+              style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}
+            >
+              +
+            </button>
+          )}
         </div>
 
         {/* ── Stats Cards ── */}
@@ -164,13 +185,12 @@ export default function ExceptionsList() {
             </div>
             <div className="toolbar-right">
               <div className="filter-wrapper">
-                <span>🏷️</span>
                 <select
                   className="status-select"
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                 >
-                  <option value="ALL">All Types</option>
+                  <option value="ALL">Type</option>
                   {Object.entries(EXCEPTION_TYPE_CONFIG).map(([key, cfg]) => (
                     <option key={key} value={key}>{cfg.label}</option>
                   ))}
@@ -182,12 +202,26 @@ export default function ExceptionsList() {
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
-                  <option value="ALL">All Status</option>
+                  <option value="ALL">Status</option>
                   {Object.entries(EXCEPTION_STATUS_CONFIG).map(([key, cfg]) => (
                     <option key={key} value={key}>{cfg.label}</option>
                   ))}
                 </select>
               </div>
+              <button className="btn-export" onClick={() => {
+                const headers = ['Exception ID','Type','Booking','Reported By','Status'];
+                const rows = filtered.map((item) => {
+                  const ex = item.exceptiondto || {};
+                  return [
+                    `EX${String(ex.exceptionID).padStart(4, '0')}`,
+                    (EXCEPTION_TYPE_CONFIG[ex.type]?.label) || ex.type,
+                    ex.bookingId ? `BK${String(ex.bookingId).padStart(4, '0')}` : '',
+                    ex.reportedBy || '',
+                    ex.status || '',
+                  ];
+                });
+                exportCSV('exceptions.csv', headers, rows);
+              }}>⬇ Export</button>
             </div>
           </div>
 
@@ -212,7 +246,11 @@ export default function ExceptionsList() {
                     <tr>
                       <td colSpan={6} className="empty-state">
                         {exceptions.length === 0
-                          ? 'No exceptions reported yet. Click "Report Exception" to get started.'
+                          ? (user?.role === 'Admin'
+                              ? 'No exceptions available to display.'
+                              : ((user?.role === 'Shipper' || user?.role === 'Dispatcher')
+                                  ? 'No exceptions reported yet. Click "Report Exception" to get started.'
+                                  : 'No exceptions reported yet.'))
                           : 'No exceptions match your search.'}
                       </td>
                     </tr>
@@ -239,19 +277,32 @@ export default function ExceptionsList() {
                           <td className="booking-id-cell">
                             {formatBookingId(ex.bookingId)}
                           </td>
-                          <td>{ex.reportedBy || '–'}</td>
+                          <td>{ex.reportedBy ? (reporterNames[ex.reportedBy] || String(ex.reportedBy)) : '–'}</td>
                           <td>
                             <span className={`status-badge ${statusCfg.cls}`}>
                               {statusCfg.label}
                             </span>
                           </td>
                           <td>
-                            <button
-                              className="btn-view"
-                              onClick={(e) => { e.stopPropagation(); navigate(`/exceptions/${ex.exceptionID}`); }}
-                            >
-                              View
-                            </button>
+                            <div className="action-menu" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                className="kebab-btn"
+                                aria-label="Actions"
+                                onClick={() => setOpenMenuId(openMenuId === ex.exceptionID ? null : ex.exceptionID)}
+                              >
+                                ⋯
+                              </button>
+                              {openMenuId === ex.exceptionID && (
+                                <div className="kebab-dropdown">
+                                  <button
+                                    className="kebab-item"
+                                    onClick={() => { setOpenMenuId(null); navigate(`/exceptions/${ex.exceptionID}`); }}
+                                  >
+                                    View
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -263,32 +314,12 @@ export default function ExceptionsList() {
           )}
 
           {/* ── Pagination ── */}
-          {!loading && filtered.length > PAGE_SIZE && (
-            <div className="pagination pagination-right">
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                ‹ Prev
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  className={`pagination-btn ${currentPage === page ? 'pagination-btn-active' : ''}`}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next ›
-              </button>
-            </div>
+          {!loading && totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
       </div>

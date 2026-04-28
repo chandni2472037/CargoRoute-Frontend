@@ -295,7 +295,7 @@
 .layout-content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 32px; /* slightly reduced vertical padding to avoid 1px overflow */
+  padding: 14px 32px; /* compact vertical padding to avoid unnecessary scroll */
 }
 
 /* ================================================================

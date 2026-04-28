@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useContext, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { createClaim } from '../../api/exceptionsApi';
 import '../../styles/Bookings.css';
 import '../../styles/Exceptions.css';
+import { AuthContext } from '../../auth/AuthContext';
+
+const MAX_RESOLUTION_NOTES = 500;
 
 // ── Validation ───────────────────────────────────────────────────────────────
 
@@ -12,11 +15,12 @@ function validateClaimForm(fields) {
   if (!fields.exceptionId || isNaN(Number(fields.exceptionId)) || Number(fields.exceptionId) <= 0) {
     errors.exceptionId = 'Enter a valid Exception ID (positive number).';
   }
-  if (!fields.filedBy.trim()) {
-    errors.filedBy = 'Filer name is required.';
-  }
   if (!fields.amountClaimed || isNaN(Number(fields.amountClaimed)) || Number(fields.amountClaimed) <= 0) {
     errors.amountClaimed = 'Enter a valid amount (greater than 0).';
+  }
+  // Resolution notes: optional, but enforce maximum length
+  if (fields.resolutionNotes && fields.resolutionNotes.trim().length > MAX_RESOLUTION_NOTES) {
+    errors.resolutionNotes = `Resolution notes must not exceed ${MAX_RESOLUTION_NOTES} characters.`;
   }
   return errors;
 }
@@ -25,15 +29,26 @@ function validateClaimForm(fields) {
 
 const EMPTY_FORM = {
   exceptionId:     '',
-  filedBy:         '',
   amountClaimed:   '',
   resolutionNotes: '',
 };
 
 export default function NewClaim() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useContext(AuthContext);
 
-  const [fields, setFields]     = useState(EMPTY_FORM);
+  useEffect(() => {
+    // Prevent Dispatchers from accessing this page even if route guard misses it
+    if (user?.role === 'Dispatcher') {
+      navigate('/unauthorized');
+    }
+  }, [user, navigate]);
+
+  const [fields, setFields]     = useState(() => ({
+    ...EMPTY_FORM,
+    exceptionId: searchParams.get('exceptionId') || '',
+  }));
   const [errors, setErrors]     = useState({});
   const [saving, setSaving]     = useState(false);
   const [apiError, setApiError] = useState('');
@@ -58,7 +73,6 @@ export default function NewClaim() {
 
     const payload = {
       exceptionID:     Number(fields.exceptionId),
-      filedBy:         fields.filedBy.trim(),
       amountClaimed:   Number(fields.amountClaimed),
       resolutionNotes: fields.resolutionNotes.trim() || null,
     };
@@ -76,6 +90,13 @@ export default function NewClaim() {
         setApiError(String(msg));
         setSaving(false);
       });
+  };
+
+  const handleReset = () => {
+    setFields((prev) => ({ ...EMPTY_FORM, exceptionId: prev.exceptionId }));
+    setErrors({});
+    setApiError('');
+    setSaving(false);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -125,25 +146,6 @@ export default function NewClaim() {
 
               <div className="form-field">
                 <label>
-                  Filed By <span className="required">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="filedBy"
-                  placeholder="Full name or employee ID"
-                  value={fields.filedBy}
-                  onChange={handleChange}
-                  className={errors.filedBy ? 'input-error' : ''}
-                />
-                {errors.filedBy && (
-                  <span className="error-msg">{errors.filedBy}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="form-row form-row-2">
-              <div className="form-field">
-                <label>
                   Amount Claimed (₹) <span className="required">*</span>
                 </label>
                 <input
@@ -170,7 +172,9 @@ export default function NewClaim() {
                 placeholder="Optional — describe the basis for this claim or any supporting details…"
                 value={fields.resolutionNotes}
                 onChange={handleChange}
+                maxLength={MAX_RESOLUTION_NOTES}
               />
+              <span className="field-hint">Maximum {MAX_RESOLUTION_NOTES} characters allowed</span>
             </div>
           </div>
 
@@ -183,16 +187,16 @@ export default function NewClaim() {
 
           {/* ── Submit ── */}
           <div className="form-actions-row">
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Filing…' : 'File Claim'}
-            </button>
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => navigate('/claims')}
+              onClick={handleReset}
               disabled={saving}
             >
-              Cancel
+              Reset
+            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Adding…' : 'Add'}
             </button>
           </div>
 

@@ -4,6 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { USER_ROLES } from "../utils/constants";
 import "../styles/Auth.css";
 
+// All roles are available at public signup.
+const SIGNUP_ROLES = USER_ROLES;
+
 export default function Signup() {
 
   const navigate = useNavigate();
@@ -67,8 +70,9 @@ export default function Signup() {
 
           <select
             onChange={e => setForm({ ...form, role: e.target.value })}
+            value={form.role}
           >
-            {USER_ROLES.map((r) => <option key={r}>{r}</option>)}
+            {SIGNUP_ROLES.map((r) => <option key={r}>{r}</option>)}
           </select>
 
           <input

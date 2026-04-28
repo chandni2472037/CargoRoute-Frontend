@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { getAllBookings, importBookingsCsv } from '../../api/bookingsApi';
 import { siteName, STATUS_CONFIG } from '../../utils/constants';
+import { exportCSV } from '../../utils/csvExport';
 import '../../styles/Bookings.css';
+import { AuthContext } from '../../auth/AuthContext';
+import Pagination from '../../components/Pagination';
 
 function formatBookingId(id) {
   return `BK${String(id).padStart(3, '0')}`;
@@ -11,6 +14,8 @@ function formatBookingId(id) {
 
 export default function BookingsList() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const ALLOWED_CREATE_ROLES = ['Admin', 'Shipper'];
   const [bookings, setBookings]         = useState([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState('');
@@ -21,6 +26,7 @@ export default function BookingsList() {
   const fileInputRef                    = useRef(null);
   const [currentPage, setCurrentPage]   = useState(1);
   const PAGE_SIZE = 4;
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   const loadBookings = () => {
     setLoading(true);
@@ -66,12 +72,7 @@ export default function BookingsList() {
       b.pickupWindowStart, b.pickupWindowEnd,
       b.weightKg, b.volumeM3, b.pieces, b.commodity, b.status,
     ]);
-    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = 'bookings.csv'; a.click();
-    URL.revokeObjectURL(url);
+    exportCSV('bookings.csv', headers, rows);
   };
 
   const handleDownloadTemplate = () => {
@@ -89,6 +90,35 @@ export default function BookingsList() {
     const file = e.target.files[0];
     if (!file) return;
     e.target.value = '';
+    // Frontend: validate file extension (and optionally MIME) before sending to backend
+    if (!file.name || !file.name.toLowerCase().endsWith('.csv')) {
+      setImportResult({ error: 'Unsupported file format. Please upload a CSV file.' });
+      return;
+    }
+    // Read header row and validate required column headers (case-sensitive)
+    const REQUIRED_HEADERS = [
+      'shipperId', 'originSiteID', 'destinationSiteID',
+      'pickupWindowStart', 'pickupWindowEnd',
+      'deliveryWindowStart', 'deliveryWindowEnd',
+      'weightKg', 'volumeM3', 'pieces', 'commodity'
+    ];
+
+    try {
+      const text = await file.text();
+      const firstLine = text.split(/\r?\n/)[0] || '';
+      const headerCols = firstLine.split(',').map((h) => h.trim());
+      const missing = REQUIRED_HEADERS.filter((h) => !headerCols.includes(h));
+      if (missing.length > 0) {
+        const label = missing.length === 1 ? 'Missing required column header: ' : 'Missing required column headers: ';
+        setImportResult({ error: `Import failed.\n\n${label}${missing.join(', ')}\n\nNo bookings were imported.` });
+        return;
+      }
+    } catch (err) {
+      setImportResult({ error: 'Import failed. Could not read the CSV file.' });
+      return;
+    }
+
+    // Header validated — proceed to upload
     setImporting(true);
     setImportResult(null);
     try {
@@ -115,9 +145,11 @@ export default function BookingsList() {
             </div>
             <p className="page-subtitle">Manage all freight bookings and orders</p>
           </div>
-          <button className="btn-primary" title="New Booking" onClick={() => navigate('/bookings/new')} style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}>
-            +
-          </button>
+          {ALLOWED_CREATE_ROLES.includes(user?.role) && (
+            <button className="btn-primary" title="New Booking" onClick={() => navigate('/bookings/new')} style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}>
+              +
+            </button>
+          )}
         </div>
 
         {/* ── Stats cards ─────────────────────────────────────── */}
@@ -163,32 +195,35 @@ export default function BookingsList() {
             </div>
             <div className="toolbar-right">
               <div className="filter-wrapper">
-                <span>🏷️</span>
                 <select className="status-select" value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="ALL">All Status</option>
+                  <option value="ALL">Status</option>
                   {Object.entries(STATUS_CONFIG).map(([k, v]) => (
                     <option key={k} value={k}>{v.label}</option>
                   ))}
                 </select>
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                style={{ display: 'none' }}
-                onChange={handleImportFile}
-              />
-              <button className="btn-import" onClick={handleDownloadTemplate} title="Download CSV template">
-                📋 Template
-              </button>
-              <button
-                className="btn-import btn-import-primary"
-                onClick={() => fileInputRef.current.click()}
-                disabled={importing}
-              >
-                {importing ? '⏳ Importing…' : '⬆ Import CSV'}
-              </button>
+              {ALLOWED_CREATE_ROLES.includes(user?.role) && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    style={{ display: 'none' }}
+                    onChange={handleImportFile}
+                  />
+                  <button className="btn-import" onClick={handleDownloadTemplate} title="Download CSV template">
+                    📋 Template
+                  </button>
+                  <button
+                    className="btn-import btn-import-primary"
+                    onClick={() => fileInputRef.current.click()}
+                    disabled={importing}
+                  >
+                    {importing ? '⏳ Importing…' : '⬆ Import CSV'}
+                  </button>
+                </>
+              )}
               <button className="btn-export" onClick={handleExport}>⬇ Export</button>
             </div>
           </div>
@@ -220,7 +255,7 @@ export default function BookingsList() {
               <table className="bookings-table">
                 <thead>
                   <tr>
-                    <th>Booking ID</th>
+                    <th>Booking Id</th>
                     <th>Shipper</th>
                     <th>Origin</th>
                     <th>Destination</th>
@@ -232,7 +267,11 @@ export default function BookingsList() {
                   {filtered.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="empty-state">
-                        {bookings.length === 0 ? 'No bookings yet. Create your first booking.' : 'No bookings match your search.'}
+                        {bookings.length === 0
+                          ? (ALLOWED_CREATE_ROLES.includes(user?.role)
+                              ? 'No bookings yet. Create your first booking.'
+                              : 'No bookings available to display.')
+                          : 'No bookings match your search.'}
                       </td>
                     </tr>
                   ) : (
@@ -249,10 +288,25 @@ export default function BookingsList() {
                             <span className={`status-badge ${st.cls}`}>{st.label}</span>
                           </td>
                           <td>
-                            <button className="btn-view"
-                              onClick={(e) => { e.stopPropagation(); navigate(`/bookings/${b.bookingID}`); }}>
-                              View
-                            </button>
+                            <div className="action-menu" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                className="kebab-btn"
+                                aria-label="Actions"
+                                onClick={() => setOpenMenuId(openMenuId === b.bookingID ? null : b.bookingID)}
+                              >
+                                ⋯
+                              </button>
+                              {openMenuId === b.bookingID && (
+                                <div className="kebab-dropdown">
+                                  <button
+                                    className="kebab-item"
+                                    onClick={() => { setOpenMenuId(null); navigate(`/bookings/${b.bookingID}`); }}
+                                  >
+                                    View
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -264,32 +318,12 @@ export default function BookingsList() {
           )}
 
           {/* ── Pagination ── */}
-          {!loading && filtered.length > PAGE_SIZE && (
-            <div className="pagination pagination-right">
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                ‹ Prev
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  className={`pagination-btn ${currentPage === page ? 'pagination-btn-active' : ''}`}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next ›
-              </button>
-            </div>
+          {!loading && totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
       </div>

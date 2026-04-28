@@ -34,6 +34,25 @@ export const getExceptionsByStatus = (status) =>
     .get(`${BASE_URL}/cargoRoute/exception/getExceptionByStatus/${status}`)
     .then((r) => r.data);
 
+/**
+ * Resolve a numeric userId to { name, email } by calling IAM's internal endpoint.
+ * Returns the user's name (falling back to email, then the raw id string).
+ * The /internal/** path is permitAll() in IAM SecurityConfig so no auth header is needed.
+ */
+const _userCache = {};
+export const resolveUserById = async (userId) => {
+  if (!userId) return '–';
+  if (_userCache[userId]) return _userCache[userId];
+  try {
+    const res = await axios.get(`${BASE_URL}/internal/users/${userId}`);
+    const display = res.data?.name || res.data?.email || String(userId);
+    _userCache[userId] = display;
+    return display;
+  } catch {
+    return String(userId);
+  }
+};
+
 // ── Claims ───────────────────────────────────────────────────────────────────
 
 /** GET /cargoRoute/claim/getClaims → List<ClaimDTO> */

@@ -144,7 +144,8 @@ export const POD_TYPE_CONFIG = {
 
 /** Map role → landing page after login */
 export const ROLE_REDIRECT = {
-  Admin:            '/admin',
+  // Admin should land on bookings list (view all bookings)
+  Admin:            '/bookings',
   Dispatcher:       '/bookings',
   Shipper:          '/bookings',
   FleetManager:     '/bookings',

@@ -10,12 +10,20 @@ const NAV_ITEMS = [
     label: 'Bookings',
     icon: '📦',
     path: '/bookings',
-    children: [
-      { label: 'All Bookings', path: '/bookings' },
-      { label: 'New Booking',  path: '/bookings/new' },
-      { label: 'Shippers',     path: '/shippers' },
-    ],
+      children: [
+        { label: 'All Bookings', path: '/bookings' },
+        { label: 'New Booking',  path: '/bookings/new' },
+      ],
   },
+    {
+      label: 'Shippers',
+      icon: '👥',
+      path: '/shippers',
+      children: [
+        { label: 'All Shippers', path: '/shippers' },
+        { label: 'Add Shipper',  path: '/shippers/new' },
+      ],
+    },
   { label: 'Vehicles & Fleet', icon: '🚚', path: '/vehicles' },
   { label: 'Route Planning',   icon: '🗺️', path: '/routes' },
   {
@@ -55,6 +63,49 @@ export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logoutUser } = useContext(AuthContext);
+  // Filter navigation items based on role.
+  // Shippers should only see Dashboard, Bookings and Exceptions.
+  let navItems = NAV_ITEMS;
+  if (user?.role && user.role.toString().toLowerCase() === 'shipper') {
+    const allowed = ['/dashboard', '/bookings', '/exceptions'];
+    navItems = NAV_ITEMS.filter((item) => allowed.includes(item.path));
+  } else {
+    // Apply existing role-based tweaks (Admin hides certain creation actions)
+    navItems = NAV_ITEMS.map((item) => {
+      // Admin-specific tweaks: hide certain creation links
+      if (item.path === '/bookings' && item.children && user?.role === 'Admin') {
+        return { ...item, children: item.children.filter((c) => c.path !== '/bookings/new') };
+      }
+      if (item.path === '/exceptions' && item.children && user?.role === 'Admin') {
+        // Admins should not see creation actions for exceptions/claims
+        return { ...item, children: item.children.filter((c) => c.path !== '/exceptions/new' && c.path !== '/claims/new') };
+      }
+      // Dispatcher-specific tweaks: dispatchers should not see creation links for bookings or shippers
+      if (item.path === '/bookings' && item.children && user?.role === 'Dispatcher') {
+        return { ...item, children: item.children.filter((c) => c.path !== '/bookings/new') };
+      }
+      if (item.path === '/shippers' && item.children && user?.role === 'Dispatcher') {
+        return { ...item, children: item.children.filter((c) => c.path !== '/shippers/new') };
+      }
+      if (item.path === '/exceptions' && item.children && user?.role === 'Dispatcher') {
+        return { ...item, children: item.children.filter((c) => c.path !== '/claims/new') };
+      }
+      // Fleet Manager, Warehouse Manager & Billing Clerk: read-only — hide creation/import actions across modules
+      if ((item.path === '/bookings') && item.children && (user?.role === 'FleetManager' || user?.role === 'WarehouseManager' || user?.role === 'BillingClerk' || user?.role === 'Analyst')) {
+        return { ...item, children: item.children.filter((c) => c.path !== '/bookings/new') };
+      }
+      if ((item.path === '/shippers') && item.children && (user?.role === 'FleetManager' || user?.role === 'WarehouseManager' || user?.role === 'BillingClerk' || user?.role === 'Analyst')) {
+        return { ...item, children: item.children.filter((c) => c.path !== '/shippers/new') };
+      }
+      if ((item.path === '/exceptions') && item.children && (user?.role === 'FleetManager' || user?.role === 'WarehouseManager' || user?.role === 'BillingClerk' || user?.role === 'Analyst')) {
+        return { ...item, children: item.children.filter((c) => c.path !== '/exceptions/new' && c.path !== '/claims/new') };
+      }
+      if ((item.path === '/manifests') && item.children && (user?.role === 'FleetManager' || user?.role === 'WarehouseManager' || user?.role === 'BillingClerk' || user?.role === 'Analyst')) {
+        return { ...item, children: item.children.filter((c) => c.path !== '/manifests/new') };
+      }
+      return item;
+    });
+  }
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({ '/bookings': false, '/exceptions': false, '/dispatch': false, '/manifests': false });
 
@@ -89,7 +140,7 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) =>
+          {navItems.map((item) =>
             item.children ? (
               <div key={item.path}>
                 <div
@@ -171,7 +222,11 @@ export default function Layout({ children }) {
                 {user?.name ? user.name.charAt(0).toUpperCase() : 'J'}
               </div>
               <div className="user-info">
-                <div className="user-name">{user?.name || 'John Dispatcher'}</div>
+                <div className="user-name">
+                  {user?.name
+                    ? user.name.replace(/\b\w/g, (c) => c.toUpperCase())
+                    : 'John Dispatcher'}
+                </div>
                 <div className="user-role">{user?.role || 'Dispatcher'}</div>
               </div>
               <button
