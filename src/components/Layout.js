@@ -58,6 +58,15 @@ const NAV_ITEMS = [
     ],
   },
   { label: 'Exceptions & Claims', icon: '⚠️', path: '/exceptions' },
+  {
+    label: 'Reports',
+    icon: '📊',
+    path: '/reports',
+    children: [
+      { label: 'Reports', path: '/reports' },
+      { label: 'KPIs',    path: '/kpis' },
+    ],
+  },
 ];
 
 export default function Layout({ children }) {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// BillingService runs on port 9097
-const BASE_URL = process.env.REACT_APP_BILLING_API_URL || 'http://localhost:9097';
+// BillingService runs on port 9098
+const BASE_URL = process.env.REACT_APP_BILLING_API_URL || 'http://localhost:9098';
 
 const getErrorMessage = (error, fallback) => {
   if (typeof error?.response?.data === 'string') return error.response.data;

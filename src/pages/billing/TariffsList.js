@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import Pagination from '../../components/Pagination';
 import {
   getAllTariffs,
   createTariff,
@@ -46,6 +48,7 @@ function validate(form) {
 }
 
 export default function TariffsList() {
+  const navigate = useNavigate();
   const [tariffs,    setTariffs]    = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
@@ -62,6 +65,8 @@ export default function TariffsList() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting,     setDeleting]     = useState(false);
+  const [viewTarget,   setViewTarget]   = useState(null);
+  const [openMenuId,   setOpenMenuId]   = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -80,6 +85,13 @@ export default function TariffsList() {
     const matchS = statusFilter === 'ALL' || (t.status || '').toLowerCase() === statusFilter.toLowerCase();
     return matchQ && matchS;
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 5;
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+  const indexOfFirstRow = (currentPage - 1) * rowsPerPage;
+  const currentRows = filtered.slice(indexOfFirstRow, indexOfFirstRow + rowsPerPage);
+  const handlePageChange = (page) => { if (page < 1 || page > totalPages) return; setCurrentPage(page); };
 
   /* ── Open create modal ── */
   const openCreate = () => {
@@ -163,7 +175,7 @@ export default function TariffsList() {
 
   return (
     <Layout>
-      <div className="billing-page">
+      <div className="billing-page" onClick={() => setOpenMenuId(null)}>
 
         {/* Page header */}
         <div className="page-header">
@@ -171,16 +183,35 @@ export default function TariffsList() {
             <h1 className="page-title">💹 Tariffs</h1>
             <p className="page-subtitle">Rate cards for freight service types — applied during billing line generation</p>
           </div>
-          <button className="btn-primary" onClick={openCreate}>
-            + New Tariff
-          </button>
+          <button className="btn-add-new" onClick={() => navigate('/billing/tariffs/create')} title="New Tariff">+</button>
         </div>
 
         {error   && <div className="error-banner">⚠️ {error}</div>}
         {success && <div className="success-banner">✅ {success}</div>}
 
+        {/* Stat cards */}
+        <div className="billing-stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 24 }}>
+          <div className="stat-card">
+            <div className="stat-label">Total Tariffs</div>
+            <div className="stat-value">{loading ? '—' : tariffs.length}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Active</div>
+            <div className="stat-value stat-active">{loading ? '—' : tariffs.filter(t => (t.status || '').toLowerCase() === 'active').length}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Inactive</div>
+            <div className="stat-value stat-active">{loading ? '—' : tariffs.filter(t => (t.status || '').toLowerCase() === 'inactive').length}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Filtered</div>
+            <div className="stat-value">{loading ? '—' : filtered.length}</div>
+          </div>
+        </div>
+
         {/* Tariff table */}
         <div className="table-section">
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a2b45', margin: '0 0 14px' }}>All Tariffs</h2>
           <div className="table-toolbar">
             <div className="search-wrapper">
               <span className="search-icon">🔍</span>
@@ -221,50 +252,52 @@ export default function TariffsList() {
               <table className="billing-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Service Type</th>
-                    <th>Rate / kg</th>
-                    <th>Rate / m³</th>
-                    <th>Min Charge</th>
-                    <th>Effective From</th>
-                    <th>Effective To</th>
+                    <th>Id</th>
+                    <th>Service type</th>
+                    <th>Min charge</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((t) => (
+                  {currentRows.map((t) => (
                     <tr key={t.tariffID}>
                       <td className="billing-id-cell">T{String(t.tariffID).padStart(3, '0')}</td>
                       <td style={{ fontWeight: 600 }}>{t.serviceType}</td>
-                      <td><span className="rate-chip">₹{t.ratePerKg}/kg</span></td>
-                      <td><span className="rate-chip">₹{t.ratePerM3}/m³</span></td>
                       <td className="amount-cell">₹{t.minCharge?.toLocaleString('en-IN')}</td>
-                      <td style={{ fontSize: 13 }}>{fmtDate(t.effectiveFrom)}</td>
-                      <td style={{ fontSize: 13 }}>{fmtDate(t.effectiveTo)}</td>
                       <td>
                         <span className={`status-badge ${getStatusClass(t.status)}`}>
                           {t.status || '—'}
                         </span>
                       </td>
                       <td>
-                        <div className="table-actions">
+                        <div className="table-actions" style={{position:'relative'}}>
                           <button
-                            className="btn-icon"
-                            title="Edit"
-                            onClick={() => openEdit(t)}
-                          >✏️</button>
-                          <button
-                            className="btn-icon btn-icon-danger"
-                            title="Delete"
-                            onClick={() => setDeleteTarget(t.tariffID)}
-                          >🗑️</button>
+                            className="btn-dots-menu"
+                            onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === t.tariffID ? null : t.tariffID); }}
+                          >⋯</button>
+                          {openMenuId === t.tariffID && (
+                            <div className="dots-dropdown" onClick={(e) => e.stopPropagation()}>
+                              <button className="dots-item" onClick={() => { setOpenMenuId(null); setViewTarget(t); }}>👁 View</button>
+                              <button className="dots-item" onClick={() => { setOpenMenuId(null); openEdit(t); }}>✏️ Edit</button>
+                              <button className="dots-item dots-item-danger" onClick={() => { setOpenMenuId(null); setDeleteTarget(t.tariffID); }}>🗑 Delete</button>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             </div>
           )}
         </div>
@@ -375,6 +408,55 @@ export default function TariffsList() {
                 <button className="btn-primary" onClick={handleSave} disabled={saving}>
                   {saving ? 'Saving…' : editTarget ? 'Update Tariff' : 'Create Tariff'}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── View Tariff Modal ── */}
+        {viewTarget && (
+          <div className="modal-overlay" onClick={() => setViewTarget(null)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 className="modal-title">Tariff — T{String(viewTarget.tariffID).padStart(3, '0')}</h2>
+                <button className="modal-close" onClick={() => setViewTarget(null)}>✕</button>
+              </div>
+              <div className="view-detail-grid">
+                <div className="view-detail-item">
+                  <span className="view-detail-label">Tariff ID</span>
+                  <span className="view-detail-value">T{String(viewTarget.tariffID).padStart(3, '0')}</span>
+                </div>
+                <div className="view-detail-item">
+                  <span className="view-detail-label">Service Type</span>
+                  <span className="view-detail-value">{viewTarget.serviceType || '—'}</span>
+                </div>
+                <div className="view-detail-item">
+                  <span className="view-detail-label">Rate / kg</span>
+                  <span className="view-detail-value">₹{viewTarget.ratePerKg}/kg</span>
+                </div>
+                <div className="view-detail-item">
+                  <span className="view-detail-label">Rate / m³</span>
+                  <span className="view-detail-value">₹{viewTarget.ratePerM3}/m³</span>
+                </div>
+                <div className="view-detail-item">
+                  <span className="view-detail-label">Min Charge</span>
+                  <span className="view-detail-value">₹{viewTarget.minCharge?.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="view-detail-item">
+                  <span className="view-detail-label">Status</span>
+                  <span className={`status-badge ${getStatusClass(viewTarget.status)}`}>{viewTarget.status || '—'}</span>
+                </div>
+                <div className="view-detail-item">
+                  <span className="view-detail-label">Effective From</span>
+                  <span className="view-detail-value">{fmtDate(viewTarget.effectiveFrom)}</span>
+                </div>
+                <div className="view-detail-item">
+                  <span className="view-detail-label">Effective To</span>
+                  <span className="view-detail-value">{fmtDate(viewTarget.effectiveTo)}</span>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn-secondary" onClick={() => setViewTarget(null)}>Close</button>
               </div>
             </div>
           </div>

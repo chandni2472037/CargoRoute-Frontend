@@ -1,5 +1,7 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import Pagination from "../../components/Pagination";
 import {
   getAllBillingLines,
   createBillingLine,
@@ -55,11 +57,13 @@ function ViewModal({ record, onClose, onEdit }) {
 }
 
 export default function BillingLinesList() {
+  const navigate = useNavigate();
   const [lines, setLines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [search, setSearch] = useState("");
+  const [tariffFilter, setTariffFilter] = useState("ALL");
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -68,6 +72,9 @@ export default function BillingLinesList() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [viewRecord, setViewRecord] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -82,15 +89,18 @@ export default function BillingLinesList() {
 
   const filtered = lines.filter((r) => {
     const q = search.toLowerCase();
-    if (!q) return true;
     const bl = r.billing || r;
-    return (
+    const matchSearch = !q || (
       fmtBLId(bl.billingLineID).toLowerCase().includes(q) ||
       fmtBKId(bl.bookingID).toLowerCase().includes(q) ||
       (bl.tariffApplied || "").toLowerCase().includes(q) ||
       (bl.notes || "").toLowerCase().includes(q)
     );
+    const matchTariff = tariffFilter === "ALL" || (bl.tariffApplied || "") === tariffFilter;
+    return matchSearch && matchTariff;
   });
+
+  const tariffOptions = ["ALL", ...Array.from(new Set(lines.map((r) => (r.billing || r).tariffApplied || "").filter(Boolean))).sort()];
 
   const totalAmount = lines.reduce((s, r) => s + ((r.billing || r).amount || 0), 0);
 
@@ -154,16 +164,81 @@ export default function BillingLinesList() {
     setFormErrors((p) => ({ ...p, [name]: undefined }));
   };
 
+  const handleExport = () => {
+    const rows = [['BL ID', 'Booking ID', 'Load ID', 'Amount', 'Tariff Applied', 'Notes']];
+    filtered.forEach((r) => {
+      const bl = r.billing || r;
+      rows.push([bl.billingLineID, bl.bookingID, bl.loadID || '', bl.amount, bl.tariffApplied || '', bl.notes || '']);
+    });
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `billing-lines-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImporting(true);
+    setError('');
+    try {
+      const text = await file.text();
+      const [header, ...dataRows] = text.trim().split('\n');
+      const cols = header.split(',').map((c) => c.replace(/"/g, '').trim().toLowerCase());
+      let created = 0, failed = 0;
+      for (const row of dataRows) {
+        if (!row.trim()) continue;
+        const vals = row.split(',').map((v) => v.replace(/^"|"$/g, '').trim());
+        const obj = {};
+        cols.forEach((c, i) => { obj[c] = vals[i] || ''; });
+        const payload = {
+          bookingID: parseInt(obj['booking id'] || obj['bookingid'] || obj['booking_id'], 10),
+          loadID: obj['load id'] || obj['loadid'] || obj['load_id'] ? parseInt(obj['load id'] || obj['loadid'] || obj['load_id'], 10) : null,
+          amount: parseFloat(obj['amount']),
+          tariffApplied: obj['tariff applied'] || obj['tariffapplied'] || obj['tariff_applied'] || '',
+          notes: obj['notes'] || null,
+        };
+        if (!payload.bookingID || isNaN(payload.bookingID) || isNaN(payload.amount)) { failed++; continue; }
+        try { await createBillingLine(payload); created++; } catch { failed++; }
+      }
+      setSuccess(`Import complete: ${created} added${failed > 0 ? `, ${failed} skipped` : ''}.`);
+      load();
+    } catch (err) {
+      setError('Import failed: ' + err.message);
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  };
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 4;
+
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+  const indexOfFirstRow = (currentPage - 1) * rowsPerPage;
+  const currentRows = filtered.slice(indexOfFirstRow, indexOfFirstRow + rowsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+
+
   return (
     <Layout>
-      <div className="billing-page">
+      <div className="billing-page" onClick={() => setOpenMenuId(null)}>
 
         <div className="page-header">
           <div>
             <h1 className="page-title">Billing Lines</h1>
             <p className="page-subtitle">Individual charge entries per booking</p>
           </div>
-          <button className="btn-primary" onClick={openCreate}>+ Add Billing Line</button>
+          <button className="btn-add-new" onClick={() => navigate('/billing/billing-lines/create')} title="Add Billing Line">+</button>
         </div>
 
         {error && <div className="error-banner">{error}</div>}
@@ -171,27 +246,41 @@ export default function BillingLinesList() {
 
         <div className="billing-stats-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
           <div className="stat-card">
-            <span className="stat-icon">📄</span>
             <div className="stat-label">Total Lines</div>
             <div className="stat-value">{loading ? "-" : lines.length}</div>
           </div>
           <div className="stat-card">
-            <span className="stat-icon">🔍</span>
             <div className="stat-label">Filtered</div>
             <div className="stat-value">{loading ? "-" : filtered.length}</div>
           </div>
           <div className="stat-card">
-            <span className="stat-icon">💰</span>
             <div className="stat-label">Total Charged</div>
             <div className="stat-value-sm">{loading ? "-" : fmtAmt(totalAmount)}</div>
           </div>
         </div>
 
         <div className="table-section">
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a2b45', margin: '0 0 14px' }}>All Billing Lines</h2>
           <div className="table-toolbar">
             <div className="search-wrapper">
               <span className="search-icon">🔍</span>
               <input className="search-input" placeholder="Search by ID, booking or tariff..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <div className="toolbar-right">
+              <div className="filter-wrapper">
+                <span style={{ fontSize: 13, color: '#64748b' }}>Status:</span>
+                <select
+                  className="filter-select"
+                  value={tariffFilter}
+                  onChange={(e) => setTariffFilter(e.target.value)}
+                >
+                  {tariffOptions.map((t) => (
+                    <option key={t} value={t}>{t === 'ALL' ? 'All Status' : t}</option>
+                  ))}
+                </select>
+              </div>
+              <button className="btn-toolbar-action" onClick={handleExport} title="Export as CSV">↓ Export</button>
+              <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImportFile} />
             </div>
           </div>
 
@@ -204,15 +293,15 @@ export default function BillingLinesList() {
               <table className="billing-table">
                 <thead>
                   <tr>
-                    <th>BL ID</th>
+                    <th>Bl id</th>
                     <th>Booking</th>
                     <th>Amount</th>
-                    <th>Tariff Applied</th>
+                    <th>Tariff applied</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r) => {
+                  {currentRows.map((r) => {
                     const bl = r.billing || r;
                     const bkId = bl.bookingID || ((r.booking || {}).bookingID);
                     return (
@@ -222,10 +311,18 @@ export default function BillingLinesList() {
                         <td className="amount-cell">{fmtAmt(bl.amount)}</td>
                         <td><span className="rate-chip">{bl.tariffApplied || "-"}</span></td>
                         <td>
-                          <div className="table-actions">
-                            <button className="btn-view-blue" onClick={() => setViewRecord(r)}>View</button>
-                            <button className="btn-icon" title="Edit" onClick={() => openEdit(r)}>&#9999;</button>
-                            <button className="btn-icon btn-icon-danger" title="Delete" onClick={() => setDeleteTarget(bl.billingLineID)}>&#128465;</button>
+                          <div className="table-actions" style={{position:'relative'}}>
+                            <button
+                              className="btn-dots-menu"
+                              onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === bl.billingLineID ? null : bl.billingLineID); }}
+                            >⋯</button>
+                            {openMenuId === bl.billingLineID && (
+                              <div className="dots-dropdown" onClick={(e) => e.stopPropagation()}>
+                                <button className="dots-item" onClick={() => { setOpenMenuId(null); setViewRecord(r); }}>👁 View</button>
+                                <button className="dots-item" onClick={() => { setOpenMenuId(null); openEdit(r); }}>✏️ Edit</button>
+                                <button className="dots-item dots-item-danger" onClick={() => { setOpenMenuId(null); setDeleteTarget(bl.billingLineID); }}>🗑 Delete</button>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -236,6 +333,16 @@ export default function BillingLinesList() {
             </div>
           )}
         </div>
+
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
 
         <ViewModal
           record={viewRecord}

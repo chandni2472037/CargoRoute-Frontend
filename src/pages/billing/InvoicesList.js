@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import Pagination from '../../components/Pagination';
 import {
   getAllInvoices,
   createInvoice,
@@ -14,22 +15,101 @@ const EMPTY_FORM = {
   shipperID:   '',
   periodStart: '',
   periodEnd:   '',
-  linesJSON:   '[]',
+  linesJSON:   '[\n  {\n    "description": "",\n    "quantity": 1,\n    "unitPrice": 0.00,\n    "lineTotal": 0.00\n  }\n]',
   totalAmount: '',
   issuedAt:    '',
-  status:      'Pending',
+  status:      '',
 };
+
+// ── Helpers ──────────────────────────────────────────────────────
+function parseYMD(str) {
+  // accepts yyyy-mm-dd (native <input type="date"> format)
+  if (!str) return null;
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 function validate(form) {
   const errs = {};
-  if (!form.shipperID || isNaN(Number(form.shipperID))) errs.shipperID   = 'Valid Shipper ID required.';
-  if (!form.periodStart) errs.periodStart = 'Period start is required.';
-  if (!form.periodEnd)   errs.periodEnd   = 'Period end is required.';
-  if (form.periodStart && form.periodEnd && form.periodEnd < form.periodStart)
-    errs.periodEnd = 'Period end must be after period start.';
-  if (!form.totalAmount || Number(form.totalAmount) <= 0) errs.totalAmount = 'Total amount must be > 0.';
-  if (!form.linesJSON.trim()) errs.linesJSON = 'Lines JSON is required (use [] for empty).';
-  try { JSON.parse(form.linesJSON); } catch { errs.linesJSON = 'Invalid JSON format.'; }
+
+  // 1. Shipper ID
+  if (!form.shipperID) {
+    errs.shipperID = 'Shipper ID is required.';
+  } else if (isNaN(Number(form.shipperID)) || !Number.isInteger(Number(form.shipperID)) || Number(form.shipperID) <= 0) {
+    errs.shipperID = 'Shipper ID must be a positive whole number (e.g. 501).';
+  }
+
+  // 2. Period Start
+  if (!form.periodStart) {
+    errs.periodStart = 'Period start is required. Please select a date.';
+  }
+
+  // 3. Period End
+  if (!form.periodEnd) {
+    errs.periodEnd = 'Period end is required. Please select a date.';
+  } else if (form.periodStart && form.periodEnd && form.periodEnd < form.periodStart) {
+    errs.periodEnd = 'Period end must be on or after Period start.';
+  }
+
+  // 5. Billing Lines JSON — validated first so we can cross-check total
+  let linesTotal = null;
+  if (!form.linesJSON.trim()) {
+    errs.linesJSON = 'Billing lines JSON is required.';
+  } else {
+    let parsed;
+    try { parsed = JSON.parse(form.linesJSON); } catch { errs.linesJSON = 'Invalid JSON format. Check your syntax.'; }
+    if (parsed !== undefined) {
+      if (!Array.isArray(parsed)) {
+        errs.linesJSON = 'Billing lines must be a JSON array [ ... ].';
+      } else if (parsed.length === 0) {
+        errs.linesJSON = 'Billing lines cannot be empty. Add at least one line item.';
+      } else {
+        const lineErrs = [];
+        let sum = 0;
+        parsed.forEach((line, i) => {
+          const n = i + 1;
+          if (!line.description || String(line.description).trim() === '')
+            lineErrs.push(`Line ${n}: description is required.`);
+          if (line.quantity == null || isNaN(Number(line.quantity)) || Number(line.quantity) <= 0)
+            lineErrs.push(`Line ${n}: quantity must be a number > 0.`);
+          if (line.unitPrice == null || isNaN(Number(line.unitPrice)) || Number(line.unitPrice) <= 0)
+            lineErrs.push(`Line ${n}: unitPrice must be a number > 0.`);
+          if (line.quantity > 0 && line.unitPrice > 0) {
+            const expected = Math.round(Number(line.quantity) * Number(line.unitPrice) * 100) / 100;
+            if (line.lineTotal != null && Math.abs(Number(line.lineTotal) - expected) > 0.01)
+              lineErrs.push(`Line ${n}: lineTotal (${line.lineTotal}) must equal quantity × unitPrice (${expected}).`);
+            sum += expected;
+          }
+        });
+        if (lineErrs.length) errs.linesJSON = lineErrs.join(' ');
+        else linesTotal = Math.round(sum * 100) / 100;
+      }
+    }
+  }
+
+  // 4. Total Amount — must match computed lines total
+  if (!form.totalAmount) {
+    errs.totalAmount = 'Total amount is required.';
+  } else if (isNaN(Number(form.totalAmount)) || Number(form.totalAmount) <= 0) {
+    errs.totalAmount = 'Total amount must be a number greater than 0.';
+  } else if (linesTotal !== null && Math.abs(Number(form.totalAmount) - linesTotal) > 0.01) {
+    errs.totalAmount = `Total amount (${form.totalAmount}) does not match the sum of billing lines (${linesTotal}). Please correct it.`;
+  }
+
+  // 6. Issued At — optional but if provided must not be a future date
+  if (form.issuedAt) {
+    const d = parseYMD(form.issuedAt);
+    if (!d) {
+      errs.issuedAt = 'Please select a valid issued date.';
+    } else {
+      const today = new Date(); today.setHours(23, 59, 59, 999);
+      if (d > today) errs.issuedAt = 'Issued date cannot be a future date.';
+    }
+  }
+
+  // Status
+  if (!form.status) errs.status = 'Please select a status.';
+
   return errs;
 }
 
@@ -73,6 +153,7 @@ export default function InvoicesList() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting,     setDeleting]     = useState(false);
+  const [openMenuId,   setOpenMenuId]   = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -108,6 +189,13 @@ export default function InvoicesList() {
       (inv.status || '').toLowerCase() === statusFilter.toLowerCase();
     return matchQ && matchS;
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 5;
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+  const indexOfFirstRow = (currentPage - 1) * rowsPerPage;
+  const currentRows = filtered.slice(indexOfFirstRow, indexOfFirstRow + rowsPerPage);
+  const handlePageChange = (page) => { if (page < 1 || page > totalPages) return; setCurrentPage(page); };
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -188,7 +276,7 @@ export default function InvoicesList() {
 
   return (
     <Layout>
-      <div className="billing-page">
+      <div className="billing-page" onClick={() => setOpenMenuId(null)}>
 
         {/* Page header */}
         <div className="page-header">
@@ -196,35 +284,28 @@ export default function InvoicesList() {
             <h1 className="page-title">🧾 Invoices</h1>
             <p className="page-subtitle">Generate and manage shipper invoices with billing reconciliation</p>
           </div>
-          <button className="btn-primary" onClick={openCreate}>
-            + Generate Invoice
-          </button>
+          <button className="btn-add-new" onClick={() => navigate('/billing/invoices/create')} title="Generate Invoice">+</button>
         </div>
 
         {error   && <div className="error-banner">⚠️ {error}</div>}
         {success && <div className="success-banner">✅ {success}</div>}
 
-        {/* Stats */}
         <div className="billing-stats-grid">
           <div className="stat-card">
-            <span className="stat-icon">🧾</span>
             <div className="stat-label">Total Invoices</div>
-            <div className="stat-value">{loading ? '—' : total}</div>
+            <div className="stat-value">{loading ? '\u2014' : total}</div>
           </div>
           <div className="stat-card">
-            <span className="stat-icon">⏳</span>
             <div className="stat-label">Pending</div>
-            <div className="stat-value stat-pending">{loading ? '—' : pending}</div>
+            <div className="stat-value stat-pending">{loading ? '\u2014' : pending}</div>
           </div>
           <div className="stat-card">
-            <span className="stat-icon">✅</span>
             <div className="stat-label">Paid</div>
-            <div className="stat-value stat-paid">{loading ? '—' : paid}</div>
+            <div className="stat-value stat-paid">{loading ? '\u2014' : paid}</div>
           </div>
           <div className="stat-card">
-            <span className="stat-icon">🚨</span>
             <div className="stat-label">Overdue</div>
-            <div className="stat-value stat-overdue">{loading ? '—' : overdue}</div>
+            <div className="stat-value stat-overdue">{loading ? '\u2014' : overdue}</div>
           </div>
         </div>
 
@@ -236,6 +317,7 @@ export default function InvoicesList() {
 
         {/* Table */}
         <div className="table-section">
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a2b45', margin: '0 0 14px' }}>All Invoices</h2>
           <div className="table-toolbar">
             <div className="search-wrapper">
               <span className="search-icon">🔍</span>
@@ -272,21 +354,27 @@ export default function InvoicesList() {
             </div>
           ) : (
             <div className="table-wrapper">
-              <table className="billing-table">
+              <table className="billing-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: '120px' }} />
+                  <col style={{ width: '220px' }} />
+                  <col style={{ width: '150px' }} />
+                  <col style={{ width: '150px' }} />
+                  <col style={{ width: '120px' }} />
+                  <col style={{ width: '90px' }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th>Invoice ID</th>
+                    <th>Invoice id</th>
                     <th>Shipper</th>
-                    <th>Period Start</th>
-                    <th>Period End</th>
-                    <th>Issued At</th>
-                    <th>Total Amount</th>
+                    <th>Issued at</th>
+                    <th>Total amount</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r) => {
+                  {currentRows.map((r) => {
                     const inv     = r.invoice || {};
                     const shipper = r.shipper || {};
                     return (
@@ -300,8 +388,6 @@ export default function InvoicesList() {
                             <div style={{ fontSize: 12, color: '#94a3b8' }}>{shipper.contactInfo}</div>
                           )}
                         </td>
-                        <td style={{ fontSize: 13 }}>{fmtDate(inv.periodStart)}</td>
-                        <td style={{ fontSize: 13 }}>{fmtDate(inv.periodEnd)}</td>
                         <td style={{ fontSize: 13 }}>{fmtDate(inv.issuedAt)}</td>
                         <td className="amount-cell">{fmtCurrency(inv.totalAmount)}</td>
                         <td>
@@ -309,26 +395,33 @@ export default function InvoicesList() {
                             {inv.status || 'Unknown'}
                           </span>
                         </td>
-                        <td>
-                          <div className="table-actions">
-                            <button
-                              className="btn-view"
-                              onClick={() => navigate(`/billing/invoices/${inv.invoiceID}`)}
-                            >
-                              View
-                            </button>
-                            <button
-                              className="btn-icon btn-icon-danger"
-                              title="Delete"
-                              onClick={() => setDeleteTarget(inv.invoiceID)}
-                            >🗑️</button>
-                          </div>
+                        <td style={{ position: 'relative' }}>
+                          <button
+                            className="btn-dots-menu"
+                            onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === inv.invoiceID ? null : inv.invoiceID); }}
+                            title="Actions"
+                          >⋯</button>
+                          {openMenuId === inv.invoiceID && (
+                            <div className="dots-dropdown" onClick={(e) => e.stopPropagation()}>
+                              <button className="dots-item" onClick={() => { setOpenMenuId(null); navigate(`/billing/invoices/${inv.invoiceID}`); }}>👁 View</button>
+                              <button className="dots-item dots-item-danger" onClick={() => { setOpenMenuId(null); setDeleteTarget(inv.invoiceID); }}>🗑 Delete</button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             </div>
           )}
         </div>
@@ -343,6 +436,22 @@ export default function InvoicesList() {
               </div>
 
               <div className="modal-body">
+                {Object.keys(formErrors).length > 0 && (
+                  <div style={{
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: 8,
+                    padding: '10px 14px',
+                    marginBottom: 14,
+                    fontSize: 13,
+                    color: '#dc2626',
+                  }}>
+                    ⚠️ Please fix the following errors before submitting:
+                    <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                      {Object.values(formErrors).map((msg, i) => <li key={i}>{msg}</li>)}
+                    </ul>
+                  </div>
+                )}
                 <div className="form-field">
                   <label>Shipper ID <span className="required">*</span></label>
                   <input
@@ -376,6 +485,7 @@ export default function InvoicesList() {
                       name="periodEnd"
                       value={form.periodEnd}
                       onChange={handleField}
+                      min={form.periodStart || undefined}
                       className={formErrors.periodEnd ? 'input-error' : ''}
                     />
                     {formErrors.periodEnd && <span className="field-error">{formErrors.periodEnd}</span>}
@@ -399,33 +509,45 @@ export default function InvoicesList() {
 
                 <div className="form-field">
                   <label>Billing Lines JSON <span className="required">*</span></label>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
+                    Each line must have: <code>description</code>, <code>quantity</code> (&gt;0), <code>unitPrice</code> (&gt;0), <code>lineTotal</code> (= qty × unitPrice)
+                  </div>
                   <textarea
                     name="linesJSON"
                     value={form.linesJSON}
                     onChange={handleField}
-                    rows={4}
-                    placeholder='[{"billingLineID":1,"amount":250.75}]'
+                    rows={5}
+                    placeholder={'[\n  {\n    "description": "Freight Charge",\n    "quantity": 2,\n    "unitPrice": 500.00,\n    "lineTotal": 1000.00\n  }\n]'}
                     className={formErrors.linesJSON ? 'input-error' : ''}
-                    style={{ fontFamily: 'monospace', fontSize: 13 }}
+                    style={{ fontFamily: 'monospace', fontSize: 12 }}
                   />
                   {formErrors.linesJSON && <span className="field-error">{formErrors.linesJSON}</span>}
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-field">
-                    <label>Issued At</label>
+                    <label>Issued At <span style={{ fontSize: 11, color: '#94a3b8' }}>(optional)</span></label>
                     <input
                       type="date"
                       name="issuedAt"
                       value={form.issuedAt}
                       onChange={handleField}
+                      max={new Date().toISOString().split('T')[0]}
+                      className={formErrors.issuedAt ? 'input-error' : ''}
                     />
+                    {formErrors.issuedAt && <span className="field-error">{formErrors.issuedAt}</span>}
+                    {!form.issuedAt && !formErrors.issuedAt && (
+                      <span style={{ fontSize: 11, color: '#f59e0b' }}>⚠ If not set, today’s date will be used.</span>
+                    )}
                   </div>
                   <div className="form-field">
-                    <label>Status</label>
-                    <select name="status" value={form.status} onChange={handleField}>
+                    <label>Status <span className="required">*</span></label>
+                    <select name="status" value={form.status} onChange={handleField}
+                      className={formErrors.status ? 'input-error' : ''}>
+                      <option value="">-- Select Status --</option>
                       {STATUS_OPTIONS.map((s) => <option key={s}>{s}</option>)}
                     </select>
+                    {formErrors.status && <span className="field-error">{formErrors.status}</span>}
                   </div>
                 </div>
               </div>

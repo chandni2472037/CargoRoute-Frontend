@@ -16,9 +16,20 @@ import ProtectedRoute  from "./auth/ProtectedRoute";
 // Billing & Reconciliation module
 import BillingPanel    from "./pages/billing/BillingPanel";
 import InvoicesList    from "./pages/billing/InvoicesList";
+import InvoiceCreate   from "./pages/billing/InvoiceCreate";
 import InvoiceDetail   from "./pages/billing/InvoiceDetail";
 import BillingLinesList from "./pages/billing/BillingLinesList";
+import BillingLineCreate from "./pages/billing/BillingLineCreate";
+import BillingLinesImport from './pages/billing/BillingLinesImport';
+import BillingLinesExport from './pages/billing/BillingLinesExport';
 import TariffsList     from "./pages/billing/TariffsList";
+import TariffCreate    from "./pages/billing/TariffCreate";
+
+// KPI Reports module
+import ReportsPanel    from "./pages/reports/ReportsPanel";
+import ReportViewPage from "./pages/reports/ReportViewPage";
+import KpiPanel       from "./pages/reports/KpiPanel";
+import KpiDetailPage  from "./pages/reports/KpiDetailPage";
 
 // Dispatch module
 import DispatchList  from "./pages/dispatch/DispatchList";
@@ -40,6 +51,7 @@ const BILLING_ROLES   = ["Admin", "BillingClerk", "Analyst", "Dispatcher"];
 const DISPATCH_ROLES  = ["Admin", "Dispatcher", "Analyst"];
 const FLEET_ROLES     = ["Admin", "FleetManager", "Dispatcher", "Analyst"];
 const ROUTING_ROLES   = ["Admin", "Dispatcher", "FleetManager", "Analyst"];
+const REPORT_ROLES    = ["Admin", "Analyst"];
 
 export default function App() {
   return (
@@ -116,6 +128,14 @@ export default function App() {
             }
           />
           <Route
+            path="/billing/invoices/create"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <InvoiceCreate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/billing/invoices/:id"
             element={
               <ProtectedRoute roles={BILLING_ROLES}>
@@ -132,10 +152,42 @@ export default function App() {
             }
           />
           <Route
+            path="/billing/billing-lines/create"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLineCreate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/billing-lines/import"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLinesImport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/billing-lines/export"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLinesExport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/billing/tariffs"
             element={
               <ProtectedRoute roles={BILLING_ROLES}>
                 <TariffsList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/tariffs/create"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <TariffCreate />
               </ProtectedRoute>
             }
           />
@@ -206,6 +258,40 @@ export default function App() {
             element={
               <ProtectedRoute roles={ROUTING_ROLES}>
                 <RoutingRulesList />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* -- KPI Reports -- */}
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <ReportsPanel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/:id"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <ReportViewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kpis"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <KpiPanel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kpis/:id"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <KpiDetailPage />
               </ProtectedRoute>
             }
           />

@@ -93,20 +93,22 @@
 .sidebar-nav {
   padding: 10px 8px;
   flex: 1;
+  overflow: hidden; /* Remove the scroll bar */
+  margin: initial; /* Revert margin adjustments */
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 9px 12px; /* Restore original padding */
   border-radius: 8px;
   cursor: pointer;
   color: #475569;
   font-size: 14px;
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
-  margin-bottom: 2px;
+  margin-bottom: 2px; /* Restore original margin */
   user-select: none;
 }
 

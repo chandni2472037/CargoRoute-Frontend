@@ -251,58 +251,7 @@ export default function InvoiceDetail() {
           </div>
         </div>
 
-        {/* Billing lines from linesJSON */}
-        <div className="table-section">
-          <div className="section-header">
-            <span className="section-title">Billing Lines</span>
-            <span className="section-badge">{lines.length} line{lines.length !== 1 ? 's' : ''}</span>
-          </div>
 
-          {lines.length === 0 ? (
-            <div className="empty-state">No billing lines found in this invoice's linesJSON.</div>
-          ) : (
-            <div className="table-wrapper">
-              <table className="billing-lines-sub-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Billing Line ID</th>
-                    <th>Booking ID</th>
-                    <th>Load ID</th>
-                    <th>Tariff Applied</th>
-                    <th>Amount</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((line, idx) => (
-                    <tr key={idx}>
-                      <td style={{ color: '#94a3b8' }}>{idx + 1}</td>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                        {line.billingLineID != null ? `BL${String(line.billingLineID).padStart(4, '0')}` : '—'}
-                      </td>
-                      <td>
-                        {line.bookingID != null ? `BK${String(line.bookingID).padStart(3, '0')}` : '—'}
-                      </td>
-                      <td>
-                        {line.loadID != null ? `LD${String(line.loadID).padStart(3, '0')}` : '—'}
-                      </td>
-                      <td>
-                        {line.tariffApplied
-                          ? <span className="rate-chip">{line.tariffApplied}</span>
-                          : '—'}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>
-                        {line.amount != null ? fmtCurrency(line.amount) : '—'}
-                      </td>
-                      <td style={{ color: '#64748b', fontSize: 13 }}>{line.notes || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
 
         {/* Footer actions */}
         <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
@@ -313,7 +262,7 @@ export default function InvoiceDetail() {
             className="btn-danger"
             onClick={() => setShowDelete(true)}
           >
-            🗑 Delete Invoice
+            🗑 Delete
           </button>
         </div>
 
@@ -323,7 +272,7 @@ export default function InvoiceDetail() {
             <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
               <div className="delete-confirm-icon">🗑️</div>
               <p className="delete-confirm-text">
-                Delete invoice <strong>{fmtInvId(inv.invoiceID)}</strong>?
+                Delete <strong>{fmtInvId(inv.invoiceID)}</strong>?
                 <br />This action cannot be undone.
               </p>
               <div className="modal-footer">

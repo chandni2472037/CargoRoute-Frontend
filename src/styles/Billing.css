@@ -49,6 +49,26 @@
 .btn-primary:hover    { background: #1e40af; }
 .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
 
+.btn-add-new {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px; /* Changed from 50% to 4px for square shape */
+  background: #1d4ed8;
+  color: #fff;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 2px 6px rgba(29,78,216,0.25);
+}
+.btn-add-new:hover  { background: #1e40af; transform: scale(1.08); }
+.btn-add-new:active { transform: scale(0.95); }
+
 .btn-secondary {
   background: #fff;
   color: #374151;
@@ -112,16 +132,17 @@
 .btn-export:hover { background: #f9fafb; }
 
 .btn-view {
-  background: #eff3ff;
+  background: #dbeafe;
   border: none;
   border-radius: 6px;
   padding: 5px 12px;
   font-size: 12px;
-  font-weight: 500;
-  color: #1f3a5f;
+  font-weight: 600;
+  color: #1d4ed8;
   cursor: pointer;
+  transition: background 0.15s;
 }
-.btn-view:hover { background: #dce8ff; }
+.btn-view:hover { background: #bfdbfe; }
 
 /* ── Stats grid ─────────────────────────────────────────────────── */
 .billing-stats-grid {
@@ -136,35 +157,36 @@
 }
 
 .stat-card {
-  background: #fff;
+  background: #eff6ff;
   border: 1px solid #bfdbfe;
   border-radius: 10px;
-  padding: 12px 16px;
+  padding: 14px 20px;
   display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  border-top: 3px solid #1d4ed8;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .stat-label {
   font-size: 13px;
   color: #94a3b8;
-  margin-bottom: 6px;
   font-weight: 500;
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
-  color: #1e3a8a;
+  color: #1a2b45;
   line-height: 1;
+  flex-shrink: 0;
 }
 .stat-value-sm {
   font-size: 20px;
   font-weight: 700;
-  color: #1e3a8a;
+  color: #1a2b45;
   line-height: 1;
+  flex-shrink: 0;
 }
 .stat-pending  { color: #d97706; }
 .stat-paid     { color: #16a34a; }
@@ -300,7 +322,8 @@
 
 .search-input {
   width: 100%;
-  padding: 9px 12px 9px 34px;
+  height: 38px;
+  padding: 0 12px 0 34px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 14px;
@@ -322,11 +345,24 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #fff;
-  border: 1px solid #d1d5db;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
   border-radius: 8px;
-  padding: 5px 12px;
+  padding: 5px 10px;
   color: #374151;
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.filter-select {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #374151;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px 0;
+  min-width: 120px;
 }
 
 .status-select {
@@ -350,19 +386,18 @@
 
 .billing-table th {
   text-align: left;
-  padding: 10px 14px;
-  background: #eff6ff;
-  color: #1e40af;
-  font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  border-bottom: 1px solid #bfdbfe;
+  padding: 11px 20px;
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0;
+  border-bottom: 1px solid #2563eb;
   white-space: nowrap;
 }
 
 .billing-table td {
-  padding: 13px 14px;
+  padding: 13px 20px;
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
   vertical-align: middle;
@@ -381,6 +416,7 @@
 .amount-cell {
   font-weight: 600;
   color: #1e3a8a;
+  white-space: nowrap;
 }
 
 .notes-cell {
@@ -410,8 +446,8 @@
 
 .status-badge-lg { padding: 5px 14px; font-size: 13px; }
 
-.status-pending   { background: #fff7ed; color: #c2410c; }
-.status-paid      { background: #f0fdf4; color: #15803d; }
+.status-pending   { background: #dbeafe; color: #1d4ed8; }
+.status-paid      { background: #bfdbfe; color: #1e3a8a; }
 .status-overdue   { background: #fef2f2; color: #b91c1c; }
 .status-cancelled { background: #f8fafc; color: #94a3b8; }
 .status-draft     { background: #f1f5f9; color: #475569; }
@@ -463,18 +499,19 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: 24px;
+  overflow-y: auto;
 }
 
 .modal {
   background: #fff;
-  border-radius: 14px;
-  padding: 28px 30px;
+  border-radius: 16px;
+  padding: 32px 36px;
   width: 100%;
-  max-width: 560px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  max-width: 720px;
+  overflow: visible;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.18);
+  margin: auto;
 }
 
 .modal-sm { max-width: 400px; }
@@ -483,11 +520,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4e7ed;
 }
 
 .modal-title {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 700;
   color: #1e3a8a;
   margin: 0;
@@ -499,20 +538,22 @@
   font-size: 20px;
   color: #94a3b8;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: 6px;
   line-height: 1;
-  transition: color 0.12s;
+  transition: color 0.12s, background 0.12s;
 }
-.modal-close:hover { color: #1d4ed8; }
+.modal-close:hover { color: #1d4ed8; background: #eff6ff; }
 
-.modal-body { display: flex; flex-direction: column; gap: 16px; }
+.modal-body { display: flex; flex-direction: column; gap: 18px; }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 24px;
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid #e4e7ed;
 }
 
 .modal-text {
@@ -557,7 +598,7 @@
   background: #fff;
 }
 
-.input-error { border-color: #ef4444!important; }
+.input-error { border-color: #ef4444!important; background: #fff5f5 !important; }
 
 .required { color: #ef4444; margin-left: 2px; }
 
@@ -672,8 +713,8 @@
 .invoice-total-bar {
   background: linear-gradient(135deg, #1d4ed8, #1e40af);
   color: #fff;
-  border-radius: 12px;
-  padding: 18px 24px;
+  border-radius: 10px;
+  padding: 10px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -681,13 +722,13 @@
 }
 
 .invoice-total-label {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .invoice-total-amount {
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 700;
 }
 
@@ -702,13 +743,13 @@
 .billing-lines-sub-table th {
   text-align: left;
   padding: 8px 12px;
-  background: #f8fafc;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #e4e7ed;
+  background: #3b82f6;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  border-bottom: 1px solid #2563eb;
 }
 
 .billing-lines-sub-table td {
@@ -880,3 +921,62 @@
   transition: background 0.12s;
 }
 .btn-view-blue:hover { background: #bfdbfe; }
+
+/* ── Toolbar action buttons (Export / Import) ───────────────────────── */
+.btn-toolbar-action {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-toolbar-action:hover:not(:disabled) { background: #e2e8f0; border-color: #94a3b8; }
+.btn-toolbar-action:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── 3-dots action menu ─────────────────────────────────────────────────── */
+.btn-dots-menu {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #475569;
+  transition: background 0.15s;
+}
+.btn-dots-menu:hover { background: #e2e8f0; }
+
+.dots-dropdown {
+  position: absolute;
+  right: 0;
+  top: 110%;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 100;
+  min-width: 130px;
+  overflow: hidden;
+}
+.dots-item {
+  display: block;
+  width: 100%;
+  padding: 9px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dots-item:hover { background: #f1f5f9; }
+.dots-item-danger { color: #dc2626; }
+.dots-item-danger:hover { background: #fef2f2; }

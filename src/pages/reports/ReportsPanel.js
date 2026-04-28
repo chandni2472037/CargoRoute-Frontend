@@ -1,0 +1,360 @@
+﻿import React, { useState, useEffect, useContext, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Layout from '../../components/Layout';
+import Pagination from '../../components/Pagination';
+import { AuthContext } from '../../auth/AuthContext';
+import { generateOnTimeReport, generateUtilizationReport, generateRevenueReport, generateExceptionReport, getAllReports, deleteReport } from '../../api/reportApi';
+import '../../styles/Reports.css';
+
+const SCOPE_OPTIONS = [
+  { value: 'ONTIME',      label: 'On-Time Delivery' },
+  { value: 'REVENUE',     label: 'Revenue' },
+  { value: 'UTILIZATION', label: 'Utilization' },
+  { value: 'EXCEPTIONS',  label: 'Exceptions' },
+];
+
+function fmtDate(dt) {
+  if (!dt) return '\u2014';
+  return new Date(dt).toLocaleString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function parseMetrics(json) {
+  try { return JSON.parse(json); } catch { return {}; }
+}
+
+export default function ReportsPanel() {
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const [scope,      setScope]      = useState('ONTIME');
+  const [dateFrom,   setDateFrom]   = useState('');
+  const [dateTo,     setDateTo]     = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [genError,   setGenError]   = useState('');
+  const [genResult,  setGenResult]  = useState(null);
+
+  const [reports,      setReports]      = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [listError,    setListError]    = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting,     setDeleting]     = useState(false);
+  const [viewReport,   setViewReport]   = useState(null);
+  const [openMenuId,   setOpenMenuId]   = useState(null);
+
+  const [currentPage,  setCurrentPage]  = useState(1);
+  const [filterScope,  setFilterScope]  = useState('');
+  const rowsPerPage = 4;
+
+  const loadReports = useCallback(() => {
+    setLoading(true);
+    setListError('');
+    getAllReports()
+      .then(setReports)
+      .catch((e) => { setListError(e.message); setReports([]); })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { loadReports(); }, [loadReports]);
+
+  useEffect(() => { setCurrentPage(1); }, [filterScope]);
+
+  const filteredReports = filterScope
+    ? reports.filter((r) => r.scope === filterScope)
+    : reports;
+
+  const totalPages = Math.ceil(filteredReports.length / rowsPerPage);
+  const indexOfFirstRow = (currentPage - 1) * rowsPerPage;
+  const currentRows = [...filteredReports].reverse().slice(indexOfFirstRow, indexOfFirstRow + rowsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+  const handleGenerate = async () => {
+    if (!dateFrom || !dateTo) { setGenError('Please select both Date From and Date To.'); return; }
+    if (dateTo < dateFrom)    { setGenError('Date To must be after Date From.'); return; }
+    setGenerating(true);
+    setGenError('');
+    setGenResult(null);
+    try {
+      let result;
+      if (scope === 'UTILIZATION') {
+        result = await generateUtilizationReport({ dateFrom, dateTo, userName: user?.name || '', userRole: user?.role || '' });
+      } else if (scope === 'REVENUE') {
+        result = await generateRevenueReport({ dateFrom, dateTo, userName: user?.name || '', userRole: user?.role || '' });
+      } else if (scope === 'EXCEPTIONS') {
+        result = await generateExceptionReport({ dateFrom, dateTo, userName: user?.name || '', userRole: user?.role || '' });
+      } else {
+        result = await generateOnTimeReport({ dateFrom, dateTo, userName: user?.name || '', userRole: user?.role || '' });
+      }
+      setGenResult(result);
+      loadReports();
+    } catch (e) {
+      setGenError(e.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteReport(deleteTarget);
+      setDeleteTarget(null);
+      if (viewReport?.reportID === deleteTarget) setViewReport(null);
+      loadReports();
+    } catch (e) {
+      setListError(e.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <Layout>
+      <div className="reports-page" onClick={() => setOpenMenuId(null)}>
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title" style={{ fontSize: '20px' }}>📊 Reports</h1>
+            <p className="page-subtitle">Generate and view key performance indicator reports</p>
+          </div>
+        </div>
+
+        <div className="reports-stats-grid">
+          <div className="stat-card">
+            <div className="stat-label">On-Time Reports</div>
+            <div className="stat-value stat-active">{loading ? '\u2014' : reports.filter(r => r.scope === 'ONTIME').length}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Utilization Reports</div>
+            <div className="stat-value stat-active">{loading ? '\u2014' : reports.filter(r => r.scope === 'UTILIZATION').length}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Revenue Reports</div>
+            <div className="stat-value stat-active">{loading ? '\u2014' : reports.filter(r => r.scope === 'REVENUE').length}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Exception Reports</div>
+            <div className="stat-value stat-active">{loading ? '\u2014' : reports.filter(r => r.scope === 'EXCEPTIONS').length}</div>
+          </div>
+        </div>
+
+        <div className="report-generate-card">
+          <div className="report-generate-header">
+            <span className="report-generate-title">⚡ Generate New</span>
+          </div>
+          <div className="report-generate-body">
+            <div className="report-form-field">
+              <label className="report-form-label">Report Scope</label>
+              <select className="report-select" value={scope} onChange={(e) => { setScope(e.target.value); setGenError(''); setGenResult(null); }}>
+                {SCOPE_OPTIONS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+              </select>
+            </div>
+            <div className="report-form-field">
+              <label className="report-form-label">Date From</label>
+              <input type="date" className="report-date-input" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setGenError(''); }} />
+            </div>
+            <div className="report-form-field">
+              <label className="report-form-label">Date To</label>
+              <input type="date" className="report-date-input" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setGenError(''); }} />
+            </div>
+            <div className="report-form-field">
+              <label className="report-form-label">Generated By</label>
+              <input type="text" className="report-date-input" value={user ? `${user.name} (${user.role || 'User'})` : 'Not logged in'} readOnly style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }} />
+            </div>
+            <div className="report-generate-action">
+              <button className="btn-generate" onClick={handleGenerate} disabled={generating}>
+                {generating ? '⏳ Generating\u2026' : '▶ Generate'}
+              </button>
+            </div>
+          </div>
+          {genError && <div className="report-error-banner">⚠️ {genError}</div>}
+          {genResult && (
+            <div className="report-result-preview">
+              <div className="report-result-title">✅ Report Generated — #{genResult.reportID}</div>
+              <div className="report-result-grid">
+                <div className="result-item"><span className="result-label">Scope</span><span className="result-value">{genResult.scope}</span></div>
+                {genResult.scope === 'ONTIME' && (<>
+                  <div className="result-item"><span className="result-label">Total Bookings</span><span className="result-value">{genResult.totalBookings}</span></div>
+                  <div className="result-item"><span className="result-label">On-Time Bookings</span><span className="result-value stat-active">{genResult.onTimeBookings}</span></div>
+                  <div className="result-item"><span className="result-label">On-Time %</span><span className="result-value stat-active">{genResult.onTimePercentage}</span></div>
+                </>)}
+                {genResult.scope === 'REVENUE' && (<>
+                  <div className="result-item"><span className="result-label">Total Invoices</span><span className="result-value">{genResult.totalInvoices}</span></div>
+                  <div className="result-item"><span className="result-label">Total Revenue</span><span className="result-value stat-active">&#8377;{genResult.totalRevenue?.toLocaleString()}</span></div>
+                  <div className="result-item"><span className="result-label">Total Distance (km)</span><span className="result-value">{genResult.totalDistanceKm?.toLocaleString()}</span></div>
+                  <div className="result-item"><span className="result-label">Revenue / km</span><span className="result-value stat-active">&#8377;{genResult.revenuePerKm?.toFixed(2)}</span></div>
+                </>)}
+                {genResult.scope === 'EXCEPTIONS' && (<>
+                  <div className="result-item"><span className="result-label">Total Bookings</span><span className="result-value">{genResult.totalBookings}</span></div>
+                  <div className="result-item"><span className="result-label">Total Exceptions</span><span className="result-value" style={{ color: '#dc2626' }}>{genResult.totalExceptions}</span></div>
+                  <div className="result-item"><span className="result-label">Exception Rate</span><span className="result-value stat-active">{genResult.exceptionRate?.toFixed(2)}%</span></div>
+                </>)}
+                <div className="result-item"><span className="result-label">Generated By</span><span className="result-value">{genResult.generatedBy}</span></div>
+                <div className="result-item"><span className="result-label">Generated At</span><span className="result-value">{fmtDate(genResult.generatedAt)}</span></div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="report-table-section">
+          <div className="report-table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 className="report-section-title">All Reports</h2>
+            <select className="scope-filter" value={filterScope} onChange={(e) => setFilterScope(e.target.value)}>
+              <option value="">All Scopes</option>
+              {SCOPE_OPTIONS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+            </select>
+          </div>
+
+          {listError && <div className="report-error-banner">⚠️ {listError}</div>}
+
+          {loading ? (
+            <div className="report-empty">Loading reports\u2026</div>
+          ) : filteredReports.length === 0 ? (
+            <div className="report-empty">No reports yet. Generate one above.</div>
+          ) : (
+            <>
+              <div className="report-table-wrapper" style={{ overflowX: 'hidden', maxWidth: '100%' }}>
+                <table className="report-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                  <colgroup>
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '20%' }} />
+                    <col style={{ width: '30%' }} />
+                    <col style={{ width: '25%' }} />
+                    <col style={{ width: '10%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Id</th>
+                      <th>Scope</th>
+                      <th>Generated by</th>
+                      <th>Generated at</th>
+                      <th style={{ textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRows.map((r) => (
+                      <tr key={r.reportID}>
+                        <td className="report-id-cell">RPT{String(r.reportID).padStart(3, '0')}</td>
+                        <td>
+                          <span className={`scope-badge ${
+                            r.scope === 'UTILIZATION' ? 'scope-badge-utilization' :
+                            r.scope === 'REVENUE'     ? 'scope-badge-revenue' :
+                            r.scope === 'EXCEPTIONS'  ? 'scope-badge-exceptions' :
+                            'scope-badge-ontime'
+                          }`}>{r.scope}</span>
+                        </td>
+                        <td style={{ fontSize: 13 }}>{r.generatedBy || '\u2014'}</td>
+                        <td style={{ fontSize: 13 }}>{fmtDate(r.generatedAt)}</td>
+                        <td style={{ position: 'relative', textAlign: 'center' }}>
+                          <button
+                            className="btn-dots-menu"
+                            onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === r.reportID ? null : r.reportID); }}
+                            title="Actions"
+                          >⋯</button>
+                          {openMenuId === r.reportID && (
+                            <div className="dots-dropdown" onClick={(e) => e.stopPropagation()}>
+                              <button className="dots-item" onClick={() => { setOpenMenuId(null); navigate('/reports/' + r.reportID); }}>👁 View</button>
+                              <button className="dots-item" onClick={() => { setDeleteTarget(r.reportID); setOpenMenuId(null); }}>🗑 Delete</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {viewReport && (
+          <div className="modal-overlay" onClick={() => setViewReport(null)}>
+            <div className="report-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="report-modal-header">
+                <span>📊 Report — RPT{String(viewReport.reportID).padStart(3, '0')}</span>
+                <button className="modal-close" onClick={() => setViewReport(null)}>✕</button>
+              </div>
+              <div className="report-modal-body">
+                {(() => {
+                  const m = parseMetrics(viewReport.metricsJSON);
+                  const p = parseMetrics(viewReport.parametersJSON);
+                  return (
+                    <>
+                      <div className="report-detail-grid">
+                        <div className="report-detail-item"><span className="report-detail-label">Report ID</span><span className="report-detail-value">RPT{String(viewReport.reportID).padStart(3, '0')}</span></div>
+                        <div className="report-detail-item"><span className="report-detail-label">Scope</span><span className={`scope-badge ${viewReport.scope === 'UTILIZATION' ? 'scope-badge-utilization' : 'scope-badge-ontime'}`}>{viewReport.scope}</span></div>
+                        <div className="report-detail-item"><span className="report-detail-label">Date From</span><span className="report-detail-value">{p.dateFrom || '\u2014'}</span></div>
+                        <div className="report-detail-item"><span className="report-detail-label">Date To</span><span className="report-detail-value">{p.dateTo || '\u2014'}</span></div>
+                        <div className="report-detail-item"><span className="report-detail-label">Generated By</span><span className="report-detail-value">{viewReport.generatedBy || '\u2014'}</span></div>
+                        <div className="report-detail-item"><span className="report-detail-label">Generated At</span><span className="report-detail-value">{fmtDate(viewReport.generatedAt)}</span></div>
+                      </div>
+                      {viewReport.scope === 'ONTIME' && (
+                        <div className="report-metrics-grid">
+                          <div className="metric-card"><div className="metric-label">Total Bookings</div><div className="metric-value">{m.totalBookings ?? '\u2014'}</div></div>
+                          <div className="metric-card metric-highlight"><div className="metric-label">On-Time Bookings</div><div className="metric-value">{m.onTimeBookings ?? '\u2014'}</div></div>
+                          <div className="metric-card metric-highlight"><div className="metric-label">On-Time Rate</div><div className="metric-value">{m.onTimePercentage ?? '\u2014'}</div></div>
+                        </div>
+                      )}
+                      {viewReport.scope === 'UTILIZATION' && (
+                        <div className="report-metrics-grid">
+                          <div className="metric-card"><div className="metric-label">Total Fleet Capacity (kg)</div><div className="metric-value">{m.totalFleetCapacityKg ?? '\u2014'}</div></div>
+                          <div className="metric-card metric-highlight"><div className="metric-label">Used Capacity (kg)</div><div className="metric-value">{m.usedCapacityKg ?? '\u2014'}</div></div>
+                          <div className="metric-card metric-highlight"><div className="metric-label">Fleet Utilization %</div><div className="metric-value">{m.fleetUtilizationPercentage != null ? m.fleetUtilizationPercentage + '%' : '\u2014'}</div></div>
+                        </div>
+                      )}
+                      <div className="report-uri-row">
+                        <span className="report-detail-label">Report URI</span>
+                        <span className="report-uri-link" onClick={() => { const uri = viewReport.reportURI.startsWith('http') ? viewReport.reportURI : `${window.location.origin}${viewReport.reportURI}`; window.open(uri, '_blank'); }} title="Click to open report in a new tab">
+                          🔗 {viewReport.reportURI}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="report-modal-footer">
+                <button className="btn-secondary" onClick={() => setViewReport(null)}>Close</button>
+                <button className="btn-view-visual" onClick={() => { const id = viewReport.reportID; setViewReport(null); navigate('/reports/' + id); }}>📊 View Visual</button>
+                <button className="btn-danger" onClick={() => { setDeleteTarget(viewReport.reportID); setViewReport(null); }}>🗑 Delete</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {deleteTarget && (
+          <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
+            <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+              <div className="delete-confirm-icon">🗑️</div>
+              <p className="delete-confirm-text">
+                Delete report <strong>RPT{String(deleteTarget).padStart(3, '0')}</strong>?
+                <br />This action cannot be undone.
+              </p>
+              <div className="modal-footer">
+                <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
+                <button className="btn-danger" onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting\u2026' : 'Delete'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </Layout>
+  );
+}
