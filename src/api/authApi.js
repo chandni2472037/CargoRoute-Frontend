@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const AUTH_URL = "http://localhost:8084/auth";
-const USER_URL = "http://localhost:8084/user";
+const AUTH_URL = "http://localhost:8085/cargoRoute/auth";
+const USER_URL = "http://localhost:8085/user";
 
 export const loginUser = (data) =>
   axios.post(`${AUTH_URL}/login`, data);

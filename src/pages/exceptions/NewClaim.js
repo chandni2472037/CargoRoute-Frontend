@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import { createClaim } from '../../api/exceptionsApi';
+import { createClaim, getClaimsByException } from '../../api/exceptionsApi';
 import '../../styles/Bookings.css';
 import '../../styles/Exceptions.css';
 import { AuthContext } from '../../auth/AuthContext';
@@ -52,6 +52,7 @@ export default function NewClaim() {
   const [errors, setErrors]     = useState({});
   const [saving, setSaving]     = useState(false);
   const [apiError, setApiError] = useState('');
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -79,8 +80,25 @@ export default function NewClaim() {
 
     setSaving(true);
     createClaim(payload)
-      .then(() => {
-        navigate('/claims');
+      .then(async () => {
+        // Backend returns only a success message; fetch claims for the exception
+        try {
+          const list = await getClaimsByException(Number(fields.exceptionId));
+          if (Array.isArray(list) && list.length > 0) {
+            // Choose the claim with the highest claimID (most recently created)
+            const newest = list.reduce((a, b) => (a.claimID > b.claimID ? a : b));
+            // Show success message then redirect
+            setMessage({ type: 'success', text: 'Claim filed successfully.' });
+            setSaving(false);
+            setTimeout(() => navigate(`/claims/${newest.claimID}`), 1500);
+            return;
+          }
+        } catch (e) {
+          // ignore and fall through to list view
+        }
+        setMessage({ type: 'success', text: 'Claim filed successfully.' });
+        setSaving(false);
+        setTimeout(() => navigate('/claims'), 1500);
       })
       .catch((err) => {
         const msg =
@@ -139,31 +157,32 @@ export default function NewClaim() {
                 {errors.exceptionId && (
                   <span className="error-msg">{errors.exceptionId}</span>
                 )}
-                <span className="field-hint">
-                  The numeric ID of the exception this claim is linked to
-                </span>
+                <span className="field-hint">The numeric ID of the exception this claim is linked to</span>
+              </div>
+                <div className="form-field">
+                  <label>
+                    Amount Claimed (₹) <span className="required">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="amountClaimed"
+                    placeholder="e.g. 50000"
+                    value={fields.amountClaimed}
+                    onChange={handleChange}
+                    className={errors.amountClaimed ? 'input-error' : ''}
+                    min="0.01"
+                    step="0.01"
+                  />
+                  {errors.amountClaimed && (
+                    <span className="error-msg">{errors.amountClaimed}</span>
+                  )}
+                </div>
               </div>
 
-              <div className="form-field">
-                <label>
-                  Amount Claimed (₹) <span className="required">*</span>
-                </label>
-                <input
-                  type="number"
-                  name="amountClaimed"
-                  placeholder="e.g. 50000"
-                  value={fields.amountClaimed}
-                  onChange={handleChange}
-                  className={errors.amountClaimed ? 'input-error' : ''}
-                  min="0.01"
-                  step="0.01"
-                />
-                {errors.amountClaimed && (
-                  <span className="error-msg">{errors.amountClaimed}</span>
-                )}
-              </div>
-            </div>
+          </div>
 
+          <div className="form-section">
+            <div className="form-section-title">Resolution Notes</div>
             <div className="form-field">
               <label>Resolution Notes</label>
               <textarea
@@ -174,9 +193,14 @@ export default function NewClaim() {
                 onChange={handleChange}
                 maxLength={MAX_RESOLUTION_NOTES}
               />
+              {errors.resolutionNotes && (
+                <span className="error-msg">{errors.resolutionNotes}</span>
+              )}
               <span className="field-hint">Maximum {MAX_RESOLUTION_NOTES} characters allowed</span>
             </div>
           </div>
+
+
 
           {/* ── API Error ── */}
           {apiError && (

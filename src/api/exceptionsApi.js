@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8084';
+const BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8085';
 
 // ── Exceptions ──────────────────────────────────────────────────────────────
 
@@ -44,7 +44,7 @@ export const resolveUserById = async (userId) => {
   if (!userId) return '–';
   if (_userCache[userId]) return _userCache[userId];
   try {
-    const res = await axios.get(`${BASE_URL}/internal/users/${userId}`);
+    const res = await axios.get(`${BASE_URL}/cargoRoute/internal/users/${userId}`);
     const display = res.data?.name || res.data?.email || String(userId);
     _userCache[userId] = display;
     return display;

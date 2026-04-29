@@ -57,6 +57,7 @@ export default function NewException() {
   const [errors, setErrors]   = useState({});
   const [saving, setSaving]   = useState(false);
   const [apiError, setApiError] = useState('');
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ export default function NewException() {
   const handleSubmit = (e) => {
     e.preventDefault();
     setApiError('');
+    setMessage({ type: '', text: '' });
 
     const validationErrors = validateExceptionForm(fields);
     if (Object.keys(validationErrors).length > 0) {
@@ -96,7 +98,12 @@ export default function NewException() {
     createException(payload)
       .then((created) => {
         const id = created?.exceptionID;
-        navigate(id ? `/exceptions/${id}` : '/exceptions');
+        // Show success message and delay navigation so user can read it
+        setMessage({ type: 'success', text: 'Exception reported successfully.' });
+        setSaving(false);
+        setTimeout(() => {
+          navigate(id ? `/exceptions/${id}` : '/exceptions');
+        }, 1500);
       })
       .catch((err) => {
         const msg =
@@ -115,19 +122,12 @@ export default function NewException() {
       <div className="bookings-page exceptions-page">
 
         {/* Header */}
-        <div className="page-header">
+        <div className="form-page-header">
+          <button className="back-btn" onClick={() => navigate('/exceptions')}>←</button>
           <div>
             <h1 className="page-title">Report Exception</h1>
-            <p className="page-subtitle">
-              Log a freight exception such as a delay, damage or missing shipment
-            </p>
+            <p className="page-subtitle">Log a freight exception such as a delay, damage or missing shipment</p>
           </div>
-          <button
-            className="btn-secondary"
-            onClick={() => navigate('/exceptions')}
-          >
-            ← Back to Exceptions
-          </button>
         </div>
 
         {/* Form */}
@@ -210,6 +210,11 @@ export default function NewException() {
           </div>
 
           {/* ── API Error ── */}
+          {message.text && (
+            <div className={`auth-message auth-message-${message.type}`} style={{ marginBottom: 14 }}>
+              <span>{message.type === 'success' ? '✔' : '⚠'}</span> {message.text}
+            </div>
+          )}
           {apiError && (
             <div className="error-banner">
               <span>⚠️ {apiError}</span>
