@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8084/cargoRoute/notifications";
+const API_URL = "http://localhost:8080/cargoRoute/notifications";
 
 const authHeader = () => {
   const token = localStorage.getItem("token");
@@ -14,9 +14,29 @@ export const getAllNotifications = () =>
     headers: authHeader()
   });
 
-  export const getMyNotifications = () =>
+export const getMyNotifications = () =>
   axios.get(`${API_URL}/my`, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`
     }
   });
+
+export const markNotificationRead = (notificationId) =>
+  axios.put(`${API_URL}/${notificationId}/read`, {}, {
+    headers: authHeader()
+  });
+
+export const markAllNotificationsRead = () =>
+  axios.put(`${API_URL}/my/read-all`, {}, {
+    headers: authHeader()
+  });
+
+export const clearMyNotifications = () =>
+  axios.delete(`${API_URL}/my`, {
+    headers: authHeader()
+  });
+
+export const markOneReadAndReturn = async (notificationId) => {
+  const res = await markNotificationRead(notificationId);
+  return res?.data;
+};

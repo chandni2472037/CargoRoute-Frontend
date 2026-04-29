@@ -38,12 +38,17 @@ export const getTaskById = (taskId) =>
     .then((res) => ({ ...res, data: normalizeTask(res.data) }));
 
 export const createTask = (payload) => {
+  const relatedEntityValue = payload.relatedEntityID;
+  const normalizedRelatedEntity =
+    relatedEntityValue === "" || relatedEntityValue == null
+      ? null
+      : Number.isNaN(Number(relatedEntityValue))
+        ? String(relatedEntityValue)
+        : Number(relatedEntityValue);
+
   const body = {
     assignedTo: Number(payload.assignedTo),
-    relatedEntityID:
-      payload.relatedEntityID === "" || payload.relatedEntityID == null
-        ? null
-        : Number(payload.relatedEntityID),
+    relatedEntityID: normalizedRelatedEntity,
     description: payload.description,
     dueDate: payload.dueDate,
     status: payload.status,

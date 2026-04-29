@@ -30,6 +30,10 @@ import Notifications from "./pages/notifications/Notifications";
 import UsersPage from "./pages/users/UsersPage";
 import Profile from "./pages/users/Profile";
 import Dashboard from "./pages/Dashboard";
+import AuditLogsPage from "./pages/auditlogs/AuditLogsPage";
+import TasksPage from "./pages/tasks/TasksPage";
+import NewTaskPage from "./pages/tasks/NewTaskPage";
+import TaskDetailPage from "./pages/tasks/TaskDetailPage";
 
 
 
@@ -91,6 +95,7 @@ export default function App() {
 
           {/* User Management – ADMIN only */}
           <Route path="/admin/users" element={<ProtectedRoute role="Admin"><UsersPage /></ProtectedRoute>}/>
+          <Route path="/admin/audit-logs" element={<ProtectedRoute role="Admin"><AuditLogsPage /></ProtectedRoute>}/>
   
 
 
@@ -100,6 +105,33 @@ export default function App() {
   element={
     <ProtectedRoute>
       <Notifications />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/tasks"
+  element={
+    <ProtectedRoute>
+      <TasksPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/tasks/new"
+  element={
+    <ProtectedRoute>
+      <NewTaskPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/tasks/:id"
+  element={
+    <ProtectedRoute>
+      <TaskDetailPage />
     </ProtectedRoute>
   }
 />
