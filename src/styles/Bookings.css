@@ -106,6 +106,22 @@
 }
 .btn-secondary:hover { background: #f9fafb; }
 
+/* Edit button uses the app primary color to match other primary actions */
+.btn-edit {
+  background: #3b82f6; /* reuse primary blue used by .btn-primary */
+  color: #ffffff; /* white for contrast */
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-edit:hover { background: #2563eb; }
+
 
 
 .btn-export {
@@ -181,12 +197,49 @@
 }
 .btn-view:hover { background: #dbeafe; }
 
+/* Kebab (three-dot) action menu */
+.action-menu { position: relative; display: inline-block; }
+.kebab-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: #374151;
+  border-radius: 6px;
+}
+.kebab-btn:hover { background: #f3f4f6; }
+.kebab-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #fff;
+  border: 1px solid #e6e9ef;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+  border-radius: 8px;
+  min-width: 120px;
+  z-index: 30;
+}
+.kebab-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+.kebab-item:hover { background: #f8fafc; }
+
 /* ── Stats grid ─────────────────────────────────────────────────── */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 
 @media (max-width: 900px) {
@@ -215,7 +268,7 @@
   font-size: 12px;
   color: #94a3b8;
   font-weight: 600;
-  text-transform: uppercase;
+  text-transform: capitalize;
   letter-spacing: 0.5px;
   white-space: nowrap;
   overflow: hidden;
@@ -238,7 +291,7 @@
   background: #fff;
   border: 1px solid #e4e7ed;
   border-radius: 12px;
-  padding: 22px 24px;
+  padding: 16px 20px;
 }
 
 .section-title {
@@ -329,8 +382,8 @@
   background: #3b82f6;
   color: #ffffff;
   font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
+  font-size: 13px;
+  text-transform: capitalize;
   letter-spacing: 0.6px;
   border-bottom: 1px solid #2563eb;
   white-space: nowrap;
@@ -587,7 +640,7 @@
 .form-actions-row {
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -726,6 +779,20 @@
 
 .detail-card-wide { grid-column: 1 / -1; }
 
+/* Center a single detail card and keep responsive behavior */
+.detail-card-leftwide {
+  /* Span the full grid row but keep the card content left-aligned and visually wide */
+  grid-column: 1 / -1;
+  width: 75%;
+  max-width: 980px;
+  margin-left: 0; /* keep left aligned */
+  justify-self: start;
+}
+
+@media (max-width: 700px) {
+  .detail-card-leftwide { grid-column: 1 / -1; width: 100%; }
+}
+
 .detail-card-title {
   font-size: 14px;
   font-weight: 600;
@@ -792,6 +859,27 @@
   gap: 12px;
 }
 
+/* Row action menu (kebab) */
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.icon-btn:hover { background: #f1f5f9; }
+.row-action-menu { display: flex; flex-direction: column; min-width: 120px; }
+.row-action-menu .menu-item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.row-action-menu .menu-item:hover { background: #f8fafc; }
+
 /* Booking Meta two-column layout (status on the right) */
 /* Booking Meta status field helpers */
 
@@ -816,7 +904,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* keep select + buttons on a single row */
 }
 
 .edit-icon-btn {
@@ -838,7 +926,42 @@
 .edit-icon { width: 13px; height: 13px; display: block; }
 
 @media (max-width: 640px) {
-  .meta-status-edit-row { flex-wrap: wrap; }
+  /* keep edit controls on a single row even on small screens; allow horizontal overflow if needed */
+  .meta-status-edit-row { flex-wrap: nowrap; overflow-x: auto; }
+}
+
+/* Prevent the select from shrinking and ensure buttons stay inline */
+.meta-status-edit-row .status-update-select {
+  min-width: 140px;
+  flex-shrink: 0;
+}
+.meta-status-edit-row .btn-primary,
+.meta-status-edit-row .btn-secondary {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Action row containing Save / Cancel positioned below the meta card */
+.meta-edit-actions {
+  display: flex;
+  justify-content: center; /* center-align buttons horizontally */
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  grid-column: 1 / -1; /* span full width of the detail grid so centering is page-wide */
+}
+
+@media (max-width: 640px) {
+  .meta-edit-actions { justify-content: center; }
+}
+
+/* Ensure action buttons have consistent height and visual balance */
+.meta-edit-actions .btn-primary,
+.meta-edit-actions .btn-secondary {
+  min-height: 40px;
+  padding: 8px 18px;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ================================================================
@@ -974,8 +1097,27 @@
   color: #fff !important;
 }
 
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: #6b7280;
+  user-select: none;
+}
+
 .pagination-info {
   margin-left: 8px;
   font-size: 13px;
   color: #64748b;
+}
+
+/* ── Dashboard two-column grid (responsive) ─────────────────────── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 768px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
 }

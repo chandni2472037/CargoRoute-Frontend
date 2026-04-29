@@ -5,6 +5,8 @@ import { createBooking, getAllShippers } from '../../api/bookingsApi';
 import { SITES, HANDLING_FLAGS } from '../../utils/constants';
 import '../../styles/Bookings.css';
 
+const MAX_COMMODITY_LENGTH = 50;
+
 const EMPTY_FORM = {
   shipperID: '',
   originSiteID: '',
@@ -42,6 +44,8 @@ function validateBookingForm(form) {
     err.commodity = 'Commodity must be at least 2 characters.';
   } else if (!/^[a-zA-Z0-9 ,]+$/.test(form.commodity.trim())) {
     err.commodity = 'Commodity must only contain letters, numbers, spaces, and commas.';
+  } else if (form.commodity.trim().length > MAX_COMMODITY_LENGTH) {
+    err.commodity = `Commodity must not exceed ${MAX_COMMODITY_LENGTH} characters.`;
   }
   return err;
 }
@@ -56,7 +60,12 @@ export default function NewBooking() {
 
   // Fetch shippers from BookingService
   useEffect(() => {
-    getAllShippers().then(setShippers).catch(() => {});
+    getAllShippers()
+      .then(setShippers)
+      .catch((err) => {
+        console.error('Failed to load shippers:', err?.response?.status, err?.response?.data || err.message);
+        setMessage({ type: 'error', text: 'Could not load shippers. Please refresh the page or contact support.' });
+      });
   }, []);
 
   const handleChange = (e) => {
@@ -108,6 +117,13 @@ export default function NewBooking() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleReset = () => {
+    setForm(EMPTY_FORM);
+    setErrors({});
+    setMessage({ type: '', text: '' });
+    setSubmitting(false);
   };
 
   return (
@@ -213,8 +229,10 @@ export default function NewBooking() {
               <label>Commodity <span className="required">*</span></label>
               <input type="text" name="commodity" value={form.commodity} onChange={handleChange}
                 placeholder="e.g., Electronics, Industrial Parts, Consumer Goods"
+                maxLength={MAX_COMMODITY_LENGTH}
                 className={errors.commodity ? 'input-error' : ''} />
               {errors.commodity && <span className="error-msg">{errors.commodity}</span>}
+              <span className="field-hint">Maximum {MAX_COMMODITY_LENGTH} characters allowed</span>
             </div>
             <div className="form-field">
               <label>Special Handling Requirements</label>
@@ -237,11 +255,11 @@ export default function NewBooking() {
             </div>
           )}
           <div className="form-actions-row">
+            <button type="button" className="btn-secondary"
+              onClick={handleReset}>Reset</button>
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Creating…' : 'Create'}
             </button>
-            <button type="button" className="btn-secondary"
-              onClick={() => navigate('/bookings')}>Cancel</button>
           </div>
         </form>
       </div>

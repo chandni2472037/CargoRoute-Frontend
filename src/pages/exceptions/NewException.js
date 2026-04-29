@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { createException } from '../../api/exceptionsApi';
 import { EXCEPTION_TYPE_CONFIG } from '../../utils/constants';
 import '../../styles/Bookings.css';
 import '../../styles/Exceptions.css';
+import { AuthContext } from '../../auth/AuthContext';
+
+const MAX_DESCRIPTION_LENGTH = 500;
 
 // ── Validation ───────────────────────────────────────────────────────────────
 
@@ -17,19 +20,13 @@ function validateExceptionForm(fields) {
   if (!fields.type) {
     errors.type = 'Select an exception type.';
   }
-  // Reporter name: only allow letters, numbers, spaces (no special chars)
-  if (!fields.reportedBy.trim()) {
-    errors.reportedBy = 'Reporter name is required.';
-  } else if (!/^[a-zA-Z0-9 ]+$/.test(fields.reportedBy.trim())) {
-    errors.reportedBy = 'Reporter name must only contain letters, numbers, and spaces.';
-  }
-  // Description: min 10 chars, not only special chars
+  // Description: required, not only special chars, max length enforced
   if (!fields.description.trim()) {
     errors.description = 'Description is required.';
-  } else if (fields.description.trim().length < 10) {
-    errors.description = 'Description must be at least 10 characters.';
   } else if (!/[a-zA-Z0-9]/.test(fields.description)) {
     errors.description = 'Description must include letters or numbers.';
+  } else if (fields.description.trim().length > MAX_DESCRIPTION_LENGTH) {
+    errors.description = `Description must not exceed ${MAX_DESCRIPTION_LENGTH} characters.`;
   }
 
   return errors;
@@ -40,17 +37,27 @@ function validateExceptionForm(fields) {
 const EMPTY_FORM = {
   bookingId:   '',
   type:        '',
-  reportedBy:  '',
   description: '',
 };
 
 export default function NewException() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  
+  useEffect(() => {
+    // Only Shipper and Dispatcher may report exceptions
+    const allowed = ['Shipper', 'Dispatcher'];
+    if (!allowed.includes(user?.role)) {
+      navigate('/unauthorized');
+      return;
+    }
+  }, [user, navigate]);
 
   const [fields, setFields]   = useState(EMPTY_FORM);
   const [errors, setErrors]   = useState({});
   const [saving, setSaving]   = useState(false);
   const [apiError, setApiError] = useState('');
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -62,9 +69,17 @@ export default function NewException() {
     }
   };
 
+  const handleReset = () => {
+    setFields(EMPTY_FORM);
+    setErrors({});
+    setApiError('');
+    setSaving(false);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setApiError('');
+    setMessage({ type: '', text: '' });
 
     const validationErrors = validateExceptionForm(fields);
     if (Object.keys(validationErrors).length > 0) {
@@ -75,15 +90,20 @@ export default function NewException() {
     const payload = {
       bookingId:   Number(fields.bookingId),
       type:        fields.type,
-      reportedBy:  fields.reportedBy.trim(),
       description: fields.description.trim(),
+      // reportedBy is intentionally omitted — backend derives it from the JWT
     };
 
     setSaving(true);
     createException(payload)
       .then((created) => {
         const id = created?.exceptionID;
-        navigate(id ? `/exceptions/${id}` : '/exceptions');
+        // Show success message and delay navigation so user can read it
+        setMessage({ type: 'success', text: 'Exception reported successfully.' });
+        setSaving(false);
+        setTimeout(() => {
+          navigate(id ? `/exceptions/${id}` : '/exceptions');
+        }, 1500);
       })
       .catch((err) => {
         const msg =
@@ -102,19 +122,12 @@ export default function NewException() {
       <div className="bookings-page exceptions-page">
 
         {/* Header */}
-        <div className="page-header">
+        <div className="form-page-header">
+          <button className="back-btn" onClick={() => navigate('/exceptions')}>←</button>
           <div>
             <h1 className="page-title">Report Exception</h1>
-            <p className="page-subtitle">
-              Log a freight exception such as a delay, damage or missing shipment
-            </p>
+            <p className="page-subtitle">Log a freight exception such as a delay, damage or missing shipment</p>
           </div>
-          <button
-            className="btn-secondary"
-            onClick={() => navigate('/exceptions')}
-          >
-            ← Back to Exceptions
-          </button>
         </div>
 
         {/* Form */}
@@ -170,29 +183,7 @@ export default function NewException() {
             </div>
           </div>
 
-          {/* ── Reporter Details ── */}
-          <div className="form-section">
-            <div className="form-section-title">Reporter Details</div>
 
-            <div className="form-row form-row-2">
-              <div className="form-field">
-                <label>
-                  Reported By <span className="required">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="reportedBy"
-                  placeholder="Full name or employee ID"
-                  value={fields.reportedBy}
-                  onChange={handleChange}
-                  className={errors.reportedBy ? 'input-error' : ''}
-                />
-                {errors.reportedBy && (
-                  <span className="error-msg">{errors.reportedBy}</span>
-                )}
-              </div>
-            </div>
-          </div>
 
           {/* ── Incident Description ── */}
           <div className="form-section">
@@ -208,18 +199,22 @@ export default function NewException() {
                 placeholder="Describe what happened — include relevant details such as location, time, items affected and immediate action taken…"
                 value={fields.description}
                 onChange={handleChange}
+                maxLength={MAX_DESCRIPTION_LENGTH}
                 className={errors.description ? 'input-error' : ''}
               />
               {errors.description && (
                 <span className="error-msg">{errors.description}</span>
               )}
-              <span className="field-hint">
-                Minimum 10 characters · Be as specific as possible
-              </span>
+              <span className="field-hint">Maximum {MAX_DESCRIPTION_LENGTH} characters allowed</span>
             </div>
           </div>
 
           {/* ── API Error ── */}
+          {message.text && (
+            <div className={`auth-message auth-message-${message.type}`} style={{ marginBottom: 14 }}>
+              <span>{message.type === 'success' ? '✔' : '⚠'}</span> {message.text}
+            </div>
+          )}
           {apiError && (
             <div className="error-banner">
               <span>⚠️ {apiError}</span>
@@ -228,16 +223,16 @@ export default function NewException() {
 
           {/* ── Submit ── */}
           <div className="form-actions-row">
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Submitting…' : 'Submit'}
-            </button>
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => navigate('/exceptions')}
+              onClick={handleReset}
               disabled={saving}
             >
-              Cancel
+              Reset
+            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Submitting…' : 'Report'}
             </button>
           </div>
         </form>

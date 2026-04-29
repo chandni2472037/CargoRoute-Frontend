@@ -1,14 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import { AuthContext } from '../../auth/AuthContext';
 import {
   getAllClaims,
+  resolveUserById,
 } from '../../api/exceptionsApi';
 import {
   CLAIM_STATUS_CONFIG,
 } from '../../utils/constants';
+import { exportCSV } from '../../utils/csvExport';
 import '../../styles/Bookings.css';
 import '../../styles/Exceptions.css';
+import Pagination from '../../components/Pagination';
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 
@@ -29,6 +33,7 @@ function formatBookingId(id) {
 
 export default function ClaimsList() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   // Data
   const [claims, setClaims]     = useState([]);
@@ -42,6 +47,8 @@ export default function ClaimsList() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 4;
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [filedByNames, setFiledByNames] = useState({});
 
   // Status update inline — handled on ClaimDetail page
 
@@ -57,6 +64,15 @@ export default function ClaimsList() {
   }, []);
 
   useEffect(() => { loadClaims(); }, [loadClaims]);
+
+  // Resolve filedBy numeric IDs to display names
+  useEffect(() => {
+    if (claims.length === 0) return;
+    const ids = [...new Set(claims.map((c) => c.filedBy).filter(Boolean))];
+    ids.forEach((id) => {
+      resolveUserById(id).then((name) => setFiledByNames((p) => ({ ...p, [id]: name })));
+    });
+  }, [claims]);
 
   // Reset to first page whenever search/filter changes
   useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
@@ -102,7 +118,7 @@ export default function ClaimsList() {
       <div className="bookings-page exceptions-page">
 
         {/* ── Page Header ── */}
-        <div className="page-header">
+          <div className="page-header">
           <div>
             <h1 className="page-title">Claims</h1>
             <p className="page-subtitle">
@@ -116,14 +132,16 @@ export default function ClaimsList() {
             >
               ← Exceptions
             </button>
-            <button
-              className="btn-primary"
-              title="File Claim"
-              onClick={() => navigate('/claims/new')}
-              style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}
-            >
-              +
-            </button>
+            {(user?.role === 'Admin' || user?.role === 'Shipper') && (
+              <button
+                className="btn-primary"
+                title="File Claim"
+                onClick={() => navigate('/claims/new')}
+                style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}
+              >
+                +
+              </button>
+            )}
           </div>
         </div>
 
@@ -166,18 +184,31 @@ export default function ClaimsList() {
             </div>
             <div className="toolbar-right">
               <div className="filter-wrapper">
-                <span>🏷️</span>
                 <select
                   className="status-select"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
-                  <option value="ALL">All Status</option>
+                  <option value="ALL">Status</option>
                   {Object.entries(CLAIM_STATUS_CONFIG).map(([key, cfg]) => (
                     <option key={key} value={key}>{cfg.label}</option>
                   ))}
                 </select>
               </div>
+              <button className="btn-export" onClick={() => {
+                const headers = ['Claim ID','Exception','Booking','Filed By','Status'];
+                const rows = filtered.map((claim) => {
+                  const exDto = claim.exception?.exceptiondto || {};
+                  return [
+                    `CL${String(claim.claimID).padStart(4, '0')}`,
+                    exDto.exceptionID ? `EX${String(exDto.exceptionID).padStart(4, '0')}` : '',
+                    exDto.bookingId ? `BK${String(exDto.bookingId).padStart(4, '0')}` : '',
+                    claim.filedBy || '',
+                    claim.status || '',
+                  ];
+                });
+                exportCSV('claims.csv', headers, rows);
+              }}>⬇ Export</button>
             </div>
           </div>
 
@@ -209,7 +240,9 @@ export default function ClaimsList() {
                     <tr>
                       <td colSpan={6} className="empty-state">
                         {claims.length === 0
-                          ? 'No claims filed yet. Use "File Claim" to get started.'
+                          ? (user?.role === 'Admin' || user?.role === 'Shipper'
+                              ? 'No claims filed yet. Use "File Claim" to get started.'
+                              : 'No claims available to display.')
                           : 'No claims match your search.'}
                       </td>
                     </tr>
@@ -230,17 +263,30 @@ export default function ClaimsList() {
                           </button>
                         </td>
                         <td className="booking-id-cell">{formatBookingId(exDto.bookingId)}</td>
-                        <td>{claim.filedBy || '–'}</td>
+                        <td>{filedByNames[claim.filedBy] || (claim.filedBy ? String(claim.filedBy) : '–')}</td>
                         <td>
                           <span className={`status-badge ${statusCfg.cls}`}>{statusCfg.label}</span>
                         </td>
                         <td>
-                          <button
-                            className="btn-view"
-                            onClick={(e) => { e.stopPropagation(); navigate(`/claims/${claim.claimID}`); }}
-                          >
-                            View
-                          </button>
+                          <div className="action-menu" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="kebab-btn"
+                              aria-label="Actions"
+                              onClick={() => setOpenMenuId(openMenuId === claim.claimID ? null : claim.claimID)}
+                            >
+                              ⋯
+                            </button>
+                            {openMenuId === claim.claimID && (
+                              <div className="kebab-dropdown">
+                                <button
+                                  className="kebab-item"
+                                  onClick={() => { setOpenMenuId(null); navigate(`/claims/${claim.claimID}`); }}
+                                >
+                                  View
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -250,32 +296,12 @@ export default function ClaimsList() {
             </div>
           )}
           {/* ── Pagination ── */}
-          {!loading && filtered.length > PAGE_SIZE && (
-            <div className="pagination pagination-right">
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                ‹ Prev
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  className={`pagination-btn ${currentPage === page ? 'pagination-btn-active' : ''}`}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next ›
-              </button>
-            </div>
+          {!loading && totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
       </div>

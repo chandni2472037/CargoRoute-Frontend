@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import {
@@ -6,6 +6,7 @@ import {
   updateExceptionStatus,
   getClaimsByException,
   createClaim,
+  resolveUserById,
 } from '../../api/exceptionsApi';
 import {
   EXCEPTION_TYPE_CONFIG,
@@ -15,6 +16,7 @@ import {
 } from '../../utils/constants';
 import '../../styles/Bookings.css';
 import '../../styles/Exceptions.css';
+import { AuthContext } from '../../auth/AuthContext';
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 
@@ -81,16 +83,18 @@ export default function ExceptionDetail() {
   const [item, setItem]       = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
+  const [reporterName, setReporterName] = useState('');
 
   // Status update
-  const [newStatus, setNewStatus]           = useState('');
-  const [editingStatus, setEditingStatus]   = useState(false);
-  const [statusMsg, setStatusMsg]           = useState({ type: '', text: '' });
+  const [newStatus, setNewStatus]     = useState('');
+  const [isEditMode, setIsEditMode]   = useState(false);
+  const [statusMsg, setStatusMsg]     = useState({ type: '', text: '' });
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   // Claims
   const [claims, setClaims]         = useState([]);
   const [claimsLoading, setClaimsLoading] = useState(false);
+  const [claimFilerNames, setClaimFilerNames] = useState({});
   // Claims pagination
   const [claimsPage, setClaimsPage] = useState(1);
   const CLAIMS_PAGE_SIZE = 4;
@@ -111,6 +115,8 @@ export default function ExceptionDetail() {
       .then((data) => {
         setItem(data);
         setNewStatus(data.exceptiondto?.status || '');
+        const uid = data.exceptiondto?.reportedBy;
+        if (uid) resolveUserById(uid).then(setReporterName);
       })
       .catch(() => setError('Exception not found or service unavailable.'))
       .finally(() => setLoading(false));
@@ -124,10 +130,32 @@ export default function ExceptionDetail() {
       .finally(() => setClaimsLoading(false));
   }, [id]);
 
+  // Resolve claim filer numeric IDs to display names
+  useEffect(() => {
+    if (claims.length === 0) return;
+    const ids = [...new Set(claims.map((c) => c.filedBy).filter(Boolean))];
+    ids.forEach((uid) => {
+      resolveUserById(uid).then((name) =>
+        setClaimFilerNames((prev) => ({ ...prev, [uid]: name }))
+      );
+    });
+  }, [claims]);
+
   useEffect(() => {
     loadException();
     loadClaims();
   }, [loadException, loadClaims]);
+
+  const { user } = useContext(AuthContext);
+  const operationalRoles = ['Dispatcher', 'Driver'];
+  // WarehouseManager is read-only and must NOT be able to edit exception status
+  const canEditStatus = user?.role && operationalRoles.includes(user.role);
+  const CLAIM_CREATE_ROLES = ['Admin', 'Shipper'];
+
+  useEffect(() => {
+    // Prefill claim filer name from authenticated user when available
+    setClaimFields((prev) => ({ ...prev, filedBy: user?.name || '' }));
+  }, [user]);
 
   // Reset claims page when claims list updates
   useEffect(() => { setClaimsPage(1); }, [claims]);
@@ -234,23 +262,19 @@ export default function ExceptionDetail() {
         {/* ── Header ── */}
         <div className="detail-header">
           <div className="detail-header-left">
-            <button
-              className="btn-secondary"
-              onClick={() => navigate('/exceptions')}
-            >
-              ← Back
-            </button>
+            <button className="back-btn" onClick={() => navigate('/exceptions')}>←</button>
             <div>
-              <span className="detail-booking-id">
-                {formatExceptionId(ex.exceptionID)}
-              </span>
+              <div className="detail-booking-id">{formatExceptionId(ex.exceptionID)}</div>
+              <div className="page-subtitle">Exception Detail</div>
             </div>
-            <span className={`status-badge ${typeCfg.cls}`}>
-              {typeCfg.label}
-            </span>
           </div>
-
-
+          <div className="detail-header-right">
+            {canEditStatus && !isEditMode && (
+              <button className="btn-edit" onClick={() => { setIsEditMode(true); setNewStatus(ex.status); }}>
+                Edit
+              </button>
+            )}
+          </div>
         </div>
 
 
@@ -278,7 +302,7 @@ export default function ExceptionDetail() {
               </div>
               <div className="detail-field">
                 <span className="detail-label">Reported By</span>
-                <span className="detail-value">{ex.reportedBy || '–'}</span>
+                <span className="detail-value">{reporterName || (ex.reportedBy ? String(ex.reportedBy) : '–')}</span>
               </div>
               <div className="detail-field">
                 <span className="detail-label">Reported At</span>
@@ -293,24 +317,9 @@ export default function ExceptionDetail() {
               <div className="detail-field">
                 <div className="meta-status-label-row">
                   <span className="detail-label">Status</span>
-                  {!editingStatus && (
-                    <button
-                      className="edit-icon-btn"
-                      aria-label="Edit status"
-                      title="Edit status"
-                      onClick={() => { setEditingStatus(true); setNewStatus(ex.status); }}
-                    >
-                      <svg className="edit-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="14" height="14">
-                        <path d="M4 13.5V16H6.5L14.87 7.63L12.37 5.13L4 13.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M15.5 6.13L13.87 4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
-                  )}
                 </div>
                 <div className="detail-value meta-status-value">
-                  {!editingStatus ? (
-                    <span className={`status-badge ${statusCfg.cls}`}>{statusCfg.label}</span>
-                  ) : (
+                  {isEditMode && canEditStatus ? (
                     <div className="meta-status-edit-row">
                       <select
                         className="status-update-select"
@@ -321,20 +330,9 @@ export default function ExceptionDetail() {
                           <option key={key} value={key}>{cfg.label}</option>
                         ))}
                       </select>
-                      <button
-                        className="btn-primary"
-                        onClick={async () => { const ok = await handleStatusUpdate(); if (ok) setEditingStatus(false); }}
-                        disabled={updatingStatus || newStatus === ex.status}
-                      >
-                        {updatingStatus ? 'Saving…' : 'Save'}
-                      </button>
-                      <button
-                        className="btn-secondary"
-                        onClick={() => { setNewStatus(ex.status); setEditingStatus(false); }}
-                      >
-                        Cancel
-                      </button>
                     </div>
+                  ) : (
+                    <span className={`status-badge ${statusCfg.cls}`}>{statusCfg.label}</span>
                   )}
                   {statusMsg.text && (
                     <span className={`update-msg ${statusMsg.type === 'error' ? 'update-msg-error' : ''}`}>
@@ -420,9 +418,10 @@ export default function ExceptionDetail() {
             )}
 
             {!claimsLoading && claims.length === 0 && (
-              <div className="empty-state" style={{ padding: '20px 0' }}>
-                <div className="empty-text">No claims filed yet</div>
-                <div className="empty-sub">
+            <div className="empty-state" style={{ padding: '20px 0' }}>
+              <div className="empty-text">No claims filed yet</div>
+              <div className="empty-sub">
+                {CLAIM_CREATE_ROLES.includes(user?.role) && (
                   <button
                     className="btn-secondary"
                     style={{ marginTop: 10, fontSize: 14, padding: '6px 18px' }}
@@ -430,9 +429,10 @@ export default function ExceptionDetail() {
                   >
                     File Claim
                   </button>
-                </div>
+                )}
               </div>
-            )}
+            </div>
+          )}
 
             {!claimsLoading && claims.length > 0 && (
               <>
@@ -458,7 +458,7 @@ export default function ExceptionDetail() {
                             {formatClaimId(claim.claimID)}
                           </span>
                         </td>
-                        <td>{claim.filedBy || '–'}</td>
+                        <td>{claimFilerNames[claim.filedBy] || (claim.filedBy ? String(claim.filedBy) : '–')}</td>
                         <td>{formatDateTime(claim.filedAt)}</td>
                         <td>
                           <span className="amount-cell">
@@ -496,6 +496,25 @@ export default function ExceptionDetail() {
             )}
           </div>
         </div>
+
+        {/* Edit action row: Save / Cancel buttons outside the card, matching Booking Detail UX */}
+        {isEditMode && canEditStatus && (
+          <div className="meta-edit-actions">
+            <button
+              className="btn-primary"
+              onClick={async () => { const ok = await handleStatusUpdate(); if (ok) setIsEditMode(false); }}
+              disabled={updatingStatus || newStatus === ex.status}
+            >
+              {updatingStatus ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => { setNewStatus(ex.status); setIsEditMode(false); }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
 
         {/* ── File Claim Slide-in Panel ── */}
         {showClaimForm && (

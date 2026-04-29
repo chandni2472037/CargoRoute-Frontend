@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import { getClaimById, updateClaimStatus } from '../../api/exceptionsApi';
+import { getClaimById, updateClaimStatus, resolveUserById } from '../../api/exceptionsApi';
 import {
   CLAIM_STATUS_CONFIG,
   EXCEPTION_TYPE_CONFIG,
@@ -9,6 +9,7 @@ import {
 } from '../../utils/constants';
 import '../../styles/Bookings.css';
 import '../../styles/Exceptions.css';
+import { AuthContext } from '../../auth/AuthContext';
 
 function formatClaimId(id)     { return `CL${String(id).padStart(4, '0')}`; }
 function formatExceptionId(id) { return id ? `EX${String(id).padStart(4, '0')}` : '–'; }
@@ -35,6 +36,7 @@ export default function ClaimDetail() {
   const [claim, setClaim]         = useState(null);
   const [loading, setLoading]     = useState(true);
   const [notFound, setNotFound]   = useState(false);
+  const [filedByName, setFiledByName] = useState(null);
   const [newStatus, setNewStatus] = useState('');
   const [editingStatus, setEditingStatus] = useState(false);
   const [saving, setSaving]       = useState(false);
@@ -46,6 +48,16 @@ export default function ClaimDetail() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Resolve filedBy display name after claim loads
+  useEffect(() => {
+    if (!claim?.filedBy) return;
+    resolveUserById(claim.filedBy).then((n) => setFiledByName(n));
+  }, [claim]);
+
+  const { user } = useContext(AuthContext);
+  // Only Admin may edit claim status in the UI
+  const CLAIM_STATUS_EDIT_ROLES = ['Admin'];
 
   const handleStatusUpdate = async () => {
     if (!newStatus || newStatus === claim.status) return false;
@@ -103,7 +115,7 @@ export default function ClaimDetail() {
               <div className="detail-field">
                 <div className="meta-status-label-row">
                   <span className="detail-label">Status</span>
-                  {!editingStatus && (
+                  {!editingStatus && CLAIM_STATUS_EDIT_ROLES.includes(user?.role) && (
                     <button
                       className="edit-icon-btn"
                       aria-label="Edit status"
@@ -157,7 +169,7 @@ export default function ClaimDetail() {
             <div className="detail-row-2" style={{ marginTop: 14 }}>
               <div className="detail-field">
                 <div className="detail-label">Filed By</div>
-                <div className="detail-value">{claim.filedBy || '–'}</div>
+                <div className="detail-value">{filedByName || (claim.filedBy ? String(claim.filedBy) : '–')}</div>
               </div>
               <div className="detail-field">
                 <div className="detail-label">Filed At</div>

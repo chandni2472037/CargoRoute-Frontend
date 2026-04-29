@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { getBookingById, updateBookingStatus } from '../../api/bookingsApi';
 import { siteName, STATUS_CONFIG } from '../../utils/constants';
 import '../../styles/Bookings.css';
+import { AuthContext } from '../../auth/AuthContext';
 
 function formatDateTime(dt) {
   if (!dt) return '–';
@@ -24,8 +25,13 @@ export default function BookingDetail() {
   const [notFound, setNotFound]   = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [saving, setSaving]       = useState(false);
-  const [editingStatus, setEditingStatus] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [msg, setMsg]             = useState({ type: '', text: '' });
+  const { user } = useContext(AuthContext);
+  // Only operational roles may edit booking status
+  // WarehouseManager is intentionally excluded from status edit permissions (read-only)
+  const operationalRoles = ['Dispatcher', 'Driver'];
+  const canEditStatus = user?.role && operationalRoles.includes(user.role);
 
   useEffect(() => {
     getBookingById(id)
@@ -66,7 +72,7 @@ export default function BookingDetail() {
       <div className="booking-detail-page">
 
         {/* ── Header ────────────────────────────────────────── */}
-        <div className="detail-header">
+          <div className="detail-header">
           <div className="detail-header-left">
             <button className="back-btn" onClick={() => navigate('/bookings')}>←</button>
             <div>
@@ -74,7 +80,13 @@ export default function BookingDetail() {
               <div className="page-subtitle">Booking Detail</div>
             </div>
           </div>
-          {/* right header intentionally left empty to keep header compact */}
+          <div className="detail-header-right">
+            {canEditStatus && !isEditMode && (
+              <button className="btn-edit" onClick={() => { setIsEditMode(true); setNewStatus(booking.status); }}>
+                Edit
+              </button>
+            )}
+          </div>
         </div>
 
 
@@ -186,48 +198,22 @@ export default function BookingDetail() {
                 <div className="detail-value">{formatDateTime(booking.createdAt)}</div>
               </div>
               <div className="detail-field">
-                <div className="meta-status-label-row">
-                  <span className="detail-label">Status</span>
-                  {!editingStatus && (
-                    <button
-                      className="edit-icon-btn"
-                      aria-label="Edit status"
-                      onClick={() => { setEditingStatus(true); setNewStatus(booking.status); }}
-                      title="Edit status"
-                    >
-                      <svg className="edit-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="14" height="14">
-                        <path d="M4 13.5V16H6.5L14.87 7.63L12.37 5.13L4 13.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M15.5 6.13L13.87 4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
-                  )}
-                </div>
-                <div className="detail-value meta-status-value">
-                  {!editingStatus ? (
-                    <span className={`status-badge ${st.cls}`}>{st.label}</span>
-                  ) : (
-                    <div className="meta-status-edit-row">
-                      <select className="status-update-select" value={newStatus}
-                        onChange={(e) => setNewStatus(e.target.value)}>
-                        {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                          <option key={k} value={k}>{v.label}</option>
-                        ))}
-                      </select>
-                      <button
-                        className="btn-primary"
-                        onClick={async () => { const ok = await handleStatusUpdate(); if (ok) setEditingStatus(false); }}
-                        disabled={saving || newStatus === booking.status}
-                      >
-                        {saving ? 'Saving…' : 'Save'}
-                      </button>
-                      <button
-                        className="btn-secondary"
-                        onClick={() => { setNewStatus(booking.status); setEditingStatus(false); }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
+                  <div className="meta-status-label-row">
+                    <span className="detail-label">Status</span>
+                  </div>
+                  <div className="detail-value meta-status-value">
+                    {!isEditMode || !canEditStatus ? (
+                      <span className={`status-badge ${st.cls}`}>{st.label}</span>
+                    ) : (
+                      <div className="meta-status-edit-row">
+                        <select className="status-update-select" value={newStatus}
+                          onChange={(e) => setNewStatus(e.target.value)}>
+                          {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                            <option key={k} value={k}>{v.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   {msg.text && (
                     <span className={`update-msg ${msg.type === 'error' ? 'update-msg-error' : ''}`}>
                       {msg.text}
@@ -245,6 +231,25 @@ export default function BookingDetail() {
               </div>
             )}
           </div>
+
+          {/* Edit action row: Save / Cancel buttons should sit outside the meta card */}
+          {isEditMode && canEditStatus && (
+            <div className="meta-edit-actions">
+              <button
+                className="btn-primary"
+                onClick={async () => { const ok = await handleStatusUpdate(); if (ok) setIsEditMode(false); }}
+                disabled={saving || newStatus === booking.status}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => { setNewStatus(booking.status); setIsEditMode(false); }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
 
           
         </div>
