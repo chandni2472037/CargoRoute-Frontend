@@ -67,12 +67,12 @@ export default function TariffCreate() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 700, margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ maxWidth: '100%', margin: '0 auto', padding: '16px', boxSizing: 'border-box' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
           <button className="btn-export" onClick={() => navigate('/billing/tariffs')} style={{ flexShrink: 0 }}>
-            ← Back
+            ←
           </button>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a2b45', margin: 0 }}>🏷️ New Tariff</h1>
@@ -155,9 +155,9 @@ export default function TariffCreate() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8, borderTop: '1px solid #e4e7ed', marginTop: 4 }}>
-            <button className="btn-secondary" onClick={() => navigate('/billing/tariffs')}>Cancel</button>
+            <button className="btn-secondary" onClick={() => setForm(EMPTY_FORM)}>Reset</button>
             <button className="btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? '⏳ Saving…' : '🏷️ Create Tariff'}
+              {saving ? '⏳ Saving…' : '🖊 Create'}
             </button>
           </div>
 

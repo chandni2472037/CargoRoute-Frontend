@@ -352,7 +352,7 @@ export default function KpiPanel() {
                   value={scopeFilter}
                   onChange={(e) => { setScopeFilter(e.target.value); setCurrentPage(1); }}
                 >
-                  <option value="All">All Scopes</option>
+                  <option value="All">All</option>
                   {KPI_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>

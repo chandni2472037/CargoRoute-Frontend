@@ -115,6 +115,19 @@ export const getReportById = async (id) => {
   }
 };
 
+/** GET /cargoRoute/reports/export → blob (CSV) */
+export const exportReports = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/cargoRoute/reports/export`, {
+      ...authHeaders(),
+      responseType: 'blob',
+    });
+    return res.data;
+  } catch (err) {
+    throw new Error(getErrorMessage(err, 'Could not export reports.'));
+  }
+};
+
 /** DELETE /cargoRoute/reports/delete/:id */
 export const deleteReport = async (id) => {
   try {

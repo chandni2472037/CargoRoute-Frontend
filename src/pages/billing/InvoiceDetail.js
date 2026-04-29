@@ -63,10 +63,6 @@ export default function InvoiceDetail() {
   const [updateMsg,  setUpdateMsg]  = useState('');
   const [updateErr,  setUpdateErr]  = useState('');
 
-  // Delete
-  const [showDelete, setShowDelete] = useState(false);
-  const [deleting,   setDeleting]   = useState(false);
-
   useEffect(() => {
     setLoading(true);
     getInvoiceById(id)
@@ -255,51 +251,8 @@ export default function InvoiceDetail() {
 
         {/* Footer actions */}
         <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-          <button className="btn-secondary" onClick={() => navigate('/billing/invoices')}>
-            ← Back to Invoices
-          </button>
-          <button
-            className="btn-danger"
-            onClick={() => setShowDelete(true)}
-          >
-            🗑 Delete
-          </button>
+          {/* Delete button removed */}
         </div>
-
-        {/* Delete modal */}
-        {showDelete && (
-          <div className="modal-overlay" onClick={() => setShowDelete(false)}>
-            <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
-              <div className="delete-confirm-icon">🗑️</div>
-              <p className="delete-confirm-text">
-                Delete <strong>{fmtInvId(inv.invoiceID)}</strong>?
-                <br />This action cannot be undone.
-              </p>
-              <div className="modal-footer">
-                <button className="btn-secondary" onClick={() => setShowDelete(false)}>Cancel</button>
-                <button
-                  className="btn-danger"
-                  disabled={deleting}
-                  onClick={async () => {
-                    setDeleting(true);
-                    try {
-                      const { deleteInvoice } = await import('../../api/billingApi');
-                      await deleteInvoice(inv.invoiceID);
-                      navigate('/billing/invoices');
-                    } catch (e) {
-                      setError(e.message);
-                      setShowDelete(false);
-                    } finally {
-                      setDeleting(false);
-                    }
-                  }}
-                >
-                  {deleting ? 'Deleting…' : 'Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
       </div>
     </Layout>

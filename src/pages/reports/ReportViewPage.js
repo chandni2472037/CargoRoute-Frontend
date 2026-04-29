@@ -255,8 +255,8 @@ export default function ReportViewPage() {
       <div className="rv-page">
 
         {/* Back button */}
-        <button className="rv-back-btn" onClick={() => navigate('/reports')}>
-          ← Back to Reports
+        <button className="rv-back-btn" onClick={() => navigate('/reports')} title="Back">
+          ←
         </button>
 
         {/* Page header */}
@@ -270,7 +270,6 @@ export default function ReportViewPage() {
           <div className="rv-header-meta">
             <span>👤 {report.generatedBy}</span>
             <span>🕐 {fmtDate(report.generatedAt)}</span>
-            <button className="rv-delete-btn" onClick={() => setShowDeleteConfirm(true)}>🗑 Delete</button>
           </div>
         </div>
 
@@ -317,24 +316,6 @@ export default function ReportViewPage() {
             <div className="rv-visual-card rv-no-visual">No visualization available for scope: {report.scope}</div>
           )}
         </div>
-
-        {/* Delete confirm modal */}
-        {showDeleteConfirm && (
-          <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-            <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
-              <div className="delete-confirm-icon">🗑️</div>
-              <p className="delete-confirm-text">
-                Delete report <strong>RPT{String(report.reportID).padStart(3, '0')}</strong>?<br />This action cannot be undone.
-              </p>
-              <div className="modal-footer">
-                <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
-                <button className="btn-danger" onClick={handleDelete} disabled={deleting}>
-                  {deleting ? 'Deleting…' : 'Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
       </div>
     </Layout>

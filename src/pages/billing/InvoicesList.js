@@ -191,7 +191,7 @@ export default function InvoicesList() {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 5;
+  const rowsPerPage = 4;
   const totalPages = Math.ceil(filtered.length / rowsPerPage);
   const indexOfFirstRow = (currentPage - 1) * rowsPerPage;
   const currentRows = filtered.slice(indexOfFirstRow, indexOfFirstRow + rowsPerPage);
@@ -340,7 +340,7 @@ export default function InvoicesList() {
                   {STATUS_OPTIONS.map((s) => <option key={s}>{s}</option>)}
                 </select>
               </div>
-              <button className="btn-export" onClick={handleExport}>⬇ Export CSV</button>
+              <button className="btn-export" onClick={handleExport}>⬇ Export</button>
             </div>
           </div>
 
@@ -431,7 +431,7 @@ export default function InvoicesList() {
           <div className="modal-overlay" onClick={() => setShowForm(false)}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h2 className="modal-title">Generate Invoice</h2>
+                <h2 className="modal-title">Create</h2>
                 <button className="modal-close" onClick={() => setShowForm(false)}>✕</button>
               </div>
 
@@ -553,9 +553,9 @@ export default function InvoicesList() {
               </div>
 
               <div className="modal-footer">
-                <button className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                <button className="btn-secondary" onClick={() => setForm({ shipperID: '', periodStart: '', periodEnd: '', linesJSON: '', totalAmount: '', issuedAt: '', status: '' })}>Reset</button>
                 <button className="btn-primary" onClick={handleSave} disabled={saving}>
-                  {saving ? 'Saving…' : 'Generate Invoice'}
+                  {saving ? 'Saving…' : 'Create'}
                 </button>
               </div>
             </div>
@@ -572,7 +572,7 @@ export default function InvoicesList() {
                 <br />This action cannot be undone.
               </p>
               <div className="modal-footer">
-                <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
+                <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Reset</button>
                 <button className="btn-danger" onClick={handleDelete} disabled={deleting}>
                   {deleting ? 'Deleting…' : 'Delete'}
                 </button>

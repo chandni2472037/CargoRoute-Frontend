@@ -24,6 +24,10 @@ import BillingLinesImport from './pages/billing/BillingLinesImport';
 import BillingLinesExport from './pages/billing/BillingLinesExport';
 import TariffsList     from "./pages/billing/TariffsList";
 import TariffCreate    from "./pages/billing/TariffCreate";
+import BillingLineView from "./pages/billing/BillingLineView";
+import BillingLineEdit from "./pages/billing/BillingLineEdit";
+import TariffView from './pages/billing/TariffView';
+import TariffEdit from './pages/billing/TariffEdit';
 
 // KPI Reports module
 import ReportsPanel    from "./pages/reports/ReportsPanel";
@@ -176,6 +180,22 @@ export default function App() {
             }
           />
           <Route
+            path="/billing/billing-lines/view/:id"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLineView />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/billing-lines/edit/:id"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLineEdit />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/billing/tariffs"
             element={
               <ProtectedRoute roles={BILLING_ROLES}>
@@ -190,6 +210,14 @@ export default function App() {
                 <TariffCreate />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/billing/tariffs/view/:id"
+            element={<TariffView />}
+          />
+          <Route
+            path="/billing/tariffs/edit/:id"
+            element={<TariffEdit />}
           />
 
           {/* ── Dispatch ── */}

@@ -170,14 +170,14 @@
 }
 
 .scope-filter {
-  height: 28px;
-  padding: 0 8px;
-  font-size: 12px;
-  font-weight: 400;
+  height: 38px; /* Match export button height */
+  padding: 0 12px; /* Match padding */
+  font-size: 14px; /* Match font size */
+  font-weight: 600; /* Match font weight */
   color: #334155;
   background: #ffffff;
   border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border-radius: 8px; /* Match border radius */
   outline: none;
   cursor: pointer;
   min-width: 100px;
@@ -241,12 +241,13 @@
   letter-spacing: 0.5px;
 }
 
-.scope-badge-ontime      { background: #dbeafe; color: #1d4ed8; }
-.scope-badge-utilization { background: #dcfce7; color: #15803d; }
-.scope-badge-revenue     { background: #faf5ff; color: #7c3aed; }
-.scope-badge-revenue     { background: #f0fdf4; color: #15803d; }
-.scope-badge-utilization { background: #fefce8; color: #a16207; }
-.scope-badge-exceptions  { background: #fef2f2; color: #b91c1c; }
+.scope-badge-ontime,
+.scope-badge-utilization,
+.scope-badge-revenue,
+.scope-badge-exceptions {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
 
 /* ── View modal ──────────────────────────────────────────────────── */
 .report-modal {

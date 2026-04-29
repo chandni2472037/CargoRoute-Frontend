@@ -67,16 +67,16 @@ export default function KpiDetailPage() {
     <Layout>
       <div className="kpi-page">
 
-        {/* ── Back button + Header ── */}
-        <div className="page-header" style={{ alignItems: 'center', display: 'flex', gap: 16 }}>
+        {/* ── Header ── */}
+        <div className="page-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 16 }}>
           <button
             className="btn-export"
             onClick={() => navigate('/kpis')}
             style={{ flexShrink: 0 }}
           >
-            ← Back
+            ←
           </button>
-          <div>
+          <div style={{ textAlign: 'left' }}>
             <h1 className="page-title">
               {KPI_ICONS[kpi.name]} {kpi.name} — KPI Report
             </h1>

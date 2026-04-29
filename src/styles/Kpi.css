@@ -44,6 +44,9 @@
   flex-shrink: 0;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .page-title {
@@ -60,6 +63,7 @@
   margin: 0;
   font-weight: 500;
   line-height: 1.5;
+  text-align: right;
 }
 
 /* ── COMPUTE CARD ───────────────────────────────────────────────────── */

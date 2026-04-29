@@ -58,12 +58,12 @@ export default function BillingLineCreate() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 700, margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ maxWidth: '100%', width: '100%', margin: '0 auto', padding: '24px 16px' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
-          <button className="btn-export" onClick={() => navigate('/billing/billing-lines')} style={{ flexShrink: 0 }}>
-            ← Back
+          <button className="btn-export" onClick={() => navigate('/billing/billing-lines')} style={{ flexShrink: 0, fontSize: 20, padding: '8px 12px' }}>
+            ←
           </button>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a2b45', margin: 0 }}>📋 New Billing Line</h1>
@@ -123,9 +123,9 @@ export default function BillingLineCreate() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8, borderTop: '1px solid #e4e7ed', marginTop: 4 }}>
-            <button className="btn-secondary" onClick={() => navigate('/billing/billing-lines')}>Cancel</button>
+            <button className="btn-secondary" onClick={() => setForm({ loadID: '', amount: '', tariffApplied: '', notes: '' })}>Reset</button>
             <button className="btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? '⏳ Saving…' : '📋 Create Billing Line'}
+              {saving ? '⏳ Saving…' : '📋 Create'}
             </button>
           </div>
 

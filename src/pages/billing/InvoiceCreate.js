@@ -50,25 +50,13 @@ function validate(form) {
       } else if (parsed.length === 0) {
         errs.linesJSON = 'Billing lines cannot be empty. Add at least one line item.';
       } else {
-        const lineErrs = [];
         let sum = 0;
-        parsed.forEach((line, i) => {
-          const n = i + 1;
-          if (!line.description || String(line.description).trim() === '')
-            lineErrs.push(`Line ${n}: description is required.`);
-          if (line.quantity == null || isNaN(Number(line.quantity)) || Number(line.quantity) <= 0)
-            lineErrs.push(`Line ${n}: quantity must be a number > 0.`);
-          if (line.unitPrice == null || isNaN(Number(line.unitPrice)) || Number(line.unitPrice) <= 0)
-            lineErrs.push(`Line ${n}: unitPrice must be a number > 0.`);
+        parsed.forEach((line) => {
           if (line.quantity > 0 && line.unitPrice > 0) {
-            const expected = Math.round(Number(line.quantity) * Number(line.unitPrice) * 100) / 100;
-            if (line.lineTotal != null && Math.abs(Number(line.lineTotal) - expected) > 0.01)
-              lineErrs.push(`Line ${n}: lineTotal (${line.lineTotal}) must equal quantity × unitPrice (${expected}).`);
-            sum += expected;
+            sum += Math.round(Number(line.quantity) * Number(line.unitPrice) * 100) / 100;
           }
         });
-        if (lineErrs.length) errs.linesJSON = lineErrs.join(' ');
-        else linesTotal = Math.round(sum * 100) / 100;
+        linesTotal = Math.round(sum * 100) / 100;
       }
     }
   }
@@ -77,8 +65,6 @@ function validate(form) {
     errs.totalAmount = 'Total amount is required.';
   } else if (isNaN(Number(form.totalAmount)) || Number(form.totalAmount) <= 0) {
     errs.totalAmount = 'Total amount must be a number greater than 0.';
-  } else if (linesTotal !== null && Math.abs(Number(form.totalAmount) - linesTotal) > 0.01) {
-    errs.totalAmount = `Total amount (${form.totalAmount}) does not match billing lines sum (${linesTotal}).`;
   }
 
   if (form.issuedAt) {
@@ -135,15 +121,15 @@ export default function InvoiceCreate() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 820, margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ maxWidth: '100%', width: '100%', margin: '0 auto', padding: '24px 16px' }}>
 
         {/* ── Page Header ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
-          <button className="btn-export" onClick={() => navigate('/billing/invoices')} style={{ flexShrink: 0 }}>
-            ← Back
+          <button className="btn-export" onClick={() => navigate('/billing/invoices')} style={{ flexShrink: 0, fontSize: 20, padding: '8px 12px' }}>
+            ←
           </button>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a2b45', margin: 0 }}>🧾 Generate Invoice</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a2b45', margin: 0 }}>🧾 New Invoice</h1>
             <p style={{ fontSize: 13, color: '#94a3b8', margin: '4px 0 0' }}>Fill in all required fields to create a new invoice.</p>
           </div>
         </div>
@@ -221,14 +207,11 @@ export default function InvoiceCreate() {
           {/* Billing Lines JSON */}
           <div className="form-field">
             <label>Billing Lines JSON <span className="required">*</span></label>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
-              Each line must have: <code>description</code>, <code>quantity</code> (&gt;0), <code>unitPrice</code> (&gt;0), <code>lineTotal</code> (= qty × unitPrice)
-            </div>
             <textarea
               name="linesJSON" value={form.linesJSON} onChange={handleField} rows={7}
               placeholder={'[\n  {\n    "description": "Freight Charge",\n    "quantity": 2,\n    "unitPrice": 500.00,\n    "lineTotal": 1000.00\n  }\n]'}
               className={formErrors.linesJSON ? 'input-error' : ''}
-              style={{ fontFamily: 'monospace', fontSize: 13 }}
+              style={{ fontFamily: 'monospace', fontSize: 13, overflow: 'hidden', resize: 'none' }}
             />
             {formErrors.linesJSON && <span className="field-error">{formErrors.linesJSON}</span>}
           </div>
@@ -260,9 +243,9 @@ export default function InvoiceCreate() {
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8, borderTop: '1px solid #e4e7ed', marginTop: 4 }}>
-            <button className="btn-secondary" onClick={() => navigate('/billing/invoices')}>Cancel</button>
+            <button className="btn-secondary" onClick={() => setForm({ shipperID: '', periodStart: '', periodEnd: '', linesJSON: '', totalAmount: '', issuedAt: '', status: '' })}>Reset</button>
             <button className="btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? '⏳ Saving…' : '🧾 Generate Invoice'}
+              {saving ? '⏳ Saving…' : 'Create'}
             </button>
           </div>
 

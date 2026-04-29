@@ -271,12 +271,10 @@ export default function BillingLinesList() {
                 <span style={{ fontSize: 13, color: '#64748b' }}>Status:</span>
                 <select
                   className="filter-select"
-                  value={tariffFilter}
-                  onChange={(e) => setTariffFilter(e.target.value)}
+                  value="ALL"
+                  disabled
                 >
-                  {tariffOptions.map((t) => (
-                    <option key={t} value={t}>{t === 'ALL' ? 'All Status' : t}</option>
-                  ))}
+                  <option value="ALL">All</option>
                 </select>
               </div>
               <button className="btn-toolbar-action" onClick={handleExport} title="Export as CSV">↓ Export</button>
@@ -318,8 +316,8 @@ export default function BillingLinesList() {
                             >⋯</button>
                             {openMenuId === bl.billingLineID && (
                               <div className="dots-dropdown" onClick={(e) => e.stopPropagation()}>
-                                <button className="dots-item" onClick={() => { setOpenMenuId(null); setViewRecord(r); }}>👁 View</button>
-                                <button className="dots-item" onClick={() => { setOpenMenuId(null); openEdit(r); }}>✏️ Edit</button>
+                                <button className="dots-item" onClick={() => { setOpenMenuId(null); navigate(`/billing/billing-lines/view/${bl.billingLineID}`); }}>👁 View</button>
+                                <button className="dots-item" onClick={() => { setOpenMenuId(null); navigate(`/billing/billing-lines/edit/${bl.billingLineID}`); }}>✏️ Edit</button>
                                 <button className="dots-item dots-item-danger" onClick={() => { setOpenMenuId(null); setDeleteTarget(bl.billingLineID); }}>🗑 Delete</button>
                               </div>
                             )}

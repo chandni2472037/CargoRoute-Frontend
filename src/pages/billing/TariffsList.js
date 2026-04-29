@@ -87,7 +87,7 @@ export default function TariffsList() {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 5;
+  const rowsPerPage = 4;
   const totalPages = Math.ceil(filtered.length / rowsPerPage);
   const indexOfFirstRow = (currentPage - 1) * rowsPerPage;
   const currentRows = filtered.slice(indexOfFirstRow, indexOfFirstRow + rowsPerPage);
@@ -183,7 +183,7 @@ export default function TariffsList() {
             <h1 className="page-title">💹 Tariffs</h1>
             <p className="page-subtitle">Rate cards for freight service types — applied during billing line generation</p>
           </div>
-          <button className="btn-add-new" onClick={() => navigate('/billing/tariffs/create')} title="New Tariff">+</button>
+          <button className="btn-add-new" onClick={() => navigate('/billing/tariffs/create')} title="Create">+</button>
         </div>
 
         {error   && <div className="error-banner">⚠️ {error}</div>}
@@ -278,8 +278,8 @@ export default function TariffsList() {
                           >⋯</button>
                           {openMenuId === t.tariffID && (
                             <div className="dots-dropdown" onClick={(e) => e.stopPropagation()}>
-                              <button className="dots-item" onClick={() => { setOpenMenuId(null); setViewTarget(t); }}>👁 View</button>
-                              <button className="dots-item" onClick={() => { setOpenMenuId(null); openEdit(t); }}>✏️ Edit</button>
+                              <button className="dots-item" onClick={() => { setOpenMenuId(null); navigate(`/billing/tariffs/view/${t.tariffID}`); }}>👁 View</button>
+                              <button className="dots-item" onClick={() => { setOpenMenuId(null); navigate(`/billing/tariffs/edit/${t.tariffID}`); }}>✏️ Edit</button>
                               <button className="dots-item dots-item-danger" onClick={() => { setOpenMenuId(null); setDeleteTarget(t.tariffID); }}>🗑 Delete</button>
                             </div>
                           )}
@@ -404,9 +404,9 @@ export default function TariffsList() {
               </div>
 
               <div className="modal-footer">
-                <button className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                <button className="btn-secondary" onClick={() => setForm(EMPTY_FORM)}>Reset</button>
                 <button className="btn-primary" onClick={handleSave} disabled={saving}>
-                  {saving ? 'Saving…' : editTarget ? 'Update Tariff' : 'Create Tariff'}
+                  {saving ? 'Saving…' : editTarget ? 'Update Tariff' : 'Create'}
                 </button>
               </div>
             </div>
