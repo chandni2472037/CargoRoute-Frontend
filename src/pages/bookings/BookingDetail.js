@@ -2,17 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { getBookingById, updateBookingStatus } from '../../api/bookingsApi';
-import { siteName, STATUS_CONFIG } from '../../utils/constants';
 import '../../styles/Bookings.css';
 
-function formatDateTime(dt) {
+const SITE_MAP = {
+  1: 'Mumbai Warehouse',
+  2: 'Delhi Distribution Center',
+  3: 'Bengaluru Depot',
+  4: 'Chennai Hub',
+  5: 'Hyderabad Facility',
+  6: 'Kolkata Depot',
+  7: 'Pune Terminal',
+  8: 'Ahmedabad Crossdock',
+};
+const siteName = (id) => SITE_MAP[id] || `Site #${id}`;
+
+const STATUS_CONFIG = {
+  DRAFT:      { label: 'Draft',      cls: 'status-draft'      },
+  SUBMITTED:  { label: 'Submitted',  cls: 'status-submitted'  },
+  PLANNED:    { label: 'Planned',    cls: 'status-planned'    },
+  DISPATCHED: { label: 'Dispatched', cls: 'status-dispatched' },
+  IN_TRANSIT: { label: 'In Transit', cls: 'status-in-transit' },
+  DELIVERED:  { label: 'Delivered',  cls: 'status-delivered'  },
+  CANCELLED:  { label: 'Cancelled',  cls: 'status-cancelled'  },
+};
+
+function fmtDT(dt) {
   if (!dt) return '–';
   return new Date(dt).toLocaleString('en-GB', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
 }
-function formatBookingId(id) {
+function fmtBookingId(id) {
   return `BK${String(id).padStart(3, '0')}`;
 }
 
@@ -65,7 +86,7 @@ export default function BookingDetail() {
           <div className="detail-header-left">
             <button className="back-btn" onClick={() => navigate('/bookings')}>←</button>
             <div>
-              <div className="detail-booking-id">{formatBookingId(booking.bookingID)}</div>
+              <div className="detail-booking-id">{fmtBookingId(booking.bookingID)}</div>
               <div className="page-subtitle">Booking Detail</div>
             </div>
           </div>
@@ -137,11 +158,11 @@ export default function BookingDetail() {
             <div className="detail-row-2">
               <div className="detail-field">
                 <div className="detail-label">Start</div>
-                <div className="detail-value">{formatDateTime(booking.pickupWindowStart)}</div>
+                <div className="detail-value">{fmtDT(booking.pickupWindowStart)}</div>
               </div>
               <div className="detail-field">
                 <div className="detail-label">End</div>
-                <div className="detail-value">{formatDateTime(booking.pickupWindowEnd)}</div>
+                <div className="detail-value">{fmtDT(booking.pickupWindowEnd)}</div>
               </div>
             </div>
           </div>
@@ -151,11 +172,11 @@ export default function BookingDetail() {
             <div className="detail-row-2">
               <div className="detail-field">
                 <div className="detail-label">Start</div>
-                <div className="detail-value">{formatDateTime(booking.deliveryWindowStart)}</div>
+                <div className="detail-value">{fmtDT(booking.deliveryWindowStart)}</div>
               </div>
               <div className="detail-field">
                 <div className="detail-label">End</div>
-                <div className="detail-value">{formatDateTime(booking.deliveryWindowEnd)}</div>
+                <div className="detail-value">{fmtDT(booking.deliveryWindowEnd)}</div>
               </div>
             </div>
           </div>
@@ -198,7 +219,7 @@ export default function BookingDetail() {
             <h3 className="detail-card-title">Booking Meta</h3>
             <div className="detail-field">
               <div className="detail-label">Created At</div>
-              <div className="detail-value">{formatDateTime(booking.createdAt)}</div>
+              <div className="detail-value">{fmtDT(booking.createdAt)}</div>
             </div>
           </div>
         </div>

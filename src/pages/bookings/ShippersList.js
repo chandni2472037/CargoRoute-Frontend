@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import { getAllShippers, createShipper, updateShipper } from '../../api/bookingsApi';
-import { SHIPPER_STATUS_CONFIG as STATUS_CONFIG } from '../../utils/constants';
 import '../../styles/Bookings.css';
+
+const STATUS_CONFIG = {
+  ACTIVE:    { label: 'Active',    cls: 'status-created'   },
+  INACTIVE:  { label: 'Inactive',  cls: 'status-pending'   },
+  SUSPENDED: { label: 'Suspended', cls: 'status-cancelled' },
+};
 
 const EMPTY_FORM = { name: '', contactInfo: '', accountTerms: '', status: 'ACTIVE' };
 
-function validateShipperForm(form) {
+function validate(form) {
   const err = {};
   if (!form.name.trim()) err.name = 'Shipper name is required';
   return err;
@@ -24,17 +29,17 @@ export default function ShippersList() {
   const [message, setMessage]       = useState({ type: '', text: '' });
   const [search, setSearch]         = useState('');
 
-  const loadShippers = () => {
+  const load = () => {
     setLoading(true);
     getAllShippers()
       .then(setShippers)
-      .catch(() => setError('Could not load shippers. Is the API Gateway running on port 8084?'))
+      .catch(() => setError('Could not load shippers. Is BookingService running on port 7070?'))
       .finally(() => setLoading(false));
   };
 
-  useEffect(loadShippers, []);
+  useEffect(load, []);
 
-  const openAddForm = () => {
+  const openAdd = () => {
     setEditId(null);
     setForm(EMPTY_FORM);
     setFormErrors({});
@@ -42,7 +47,7 @@ export default function ShippersList() {
     setShowForm(true);
   };
 
-  const openEditForm = (s) => {
+  const openEdit = (s) => {
     setEditId(s.shipperID);
     setForm({
       name:         s.name         || '',
@@ -63,7 +68,7 @@ export default function ShippersList() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const errs = validateShipperForm(form);
+    const errs = validate(form);
     if (Object.keys(errs).length > 0) { setFormErrors(errs); return; }
     setSaving(true);
     setMessage({ type: '', text: '' });
@@ -75,7 +80,7 @@ export default function ShippersList() {
         await createShipper(form);
         setMessage({ type: 'success', text: 'Shipper added successfully.' });
       }
-      loadShippers();
+      load();
       setTimeout(() => { setShowForm(false); setMessage({ type: '', text: '' }); }, 1400);
     } catch (err) {
       setMessage({
@@ -102,10 +107,9 @@ export default function ShippersList() {
             <h1 className="page-title">Shippers</h1>
             <p className="page-subtitle">Manage registered shipper accounts</p>
           </div>
-          <button className="btn-primary" onClick={openAddForm}>+ Add Shipper</button>
+          <button className="btn-primary" onClick={openAdd}>+ Add Shipper</button>
         </div>
 
-        {/* ── Error banner ────────────────────────────────── */}
         {error && (
           <div className="auth-message auth-message-error" style={{ marginBottom: 16 }}>
             <span>⚠</span> {error}
@@ -169,7 +173,7 @@ export default function ShippersList() {
 
               <div style={{ display: 'flex', gap: 10 }}>
                 <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? 'Saving…' : (editId ? '✏️ Update Shipper' : '+ Add Shipper')}
+                  {saving ? 'Saving…' : (editId ? 'Update Shipper' : '+ Add Shipper')}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
                   Cancel
@@ -179,107 +183,93 @@ export default function ShippersList() {
           </div>
         )}
 
-        {/* ── Stats cards ─────────────────────────────────── */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-label">Total Shippers</div>
-            <div className="stat-value">{shippers.length}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Active</div>
-            <div className="stat-value stat-transit">{shippers.filter(s => s.status === 'ACTIVE').length}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Inactive</div>
-            <div className="stat-value stat-pending">{shippers.filter(s => s.status === 'INACTIVE').length}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Suspended</div>
-            <div className="stat-value stat-delivered">{shippers.filter(s => s.status === 'SUSPENDED').length}</div>
-          </div>
-        </div>
-
-        {/* ── Table section ───────────────────────────────── */}
-        <div className="table-section">
-          <h2 className="section-title">All Shippers</h2>
-
-          <div className="table-toolbar">
-            <div className="search-wrapper">
-              <span className="search-icon">🔍</span>
-              <input
-                className="search-input"
-                placeholder="Search by name or contact info..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="toolbar-right">
-              <div className="filter-wrapper">
-                <span>🏷️</span>
-                <select
-                  className="status-select"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value === 'ALL' ? '' : e.target.value)}
-                >
-                  <option value="ALL">All Status</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="INACTIVE">Inactive</option>
-                  <option value="SUSPENDED">Suspended</option>
-                </select>
+        {/* ── Stats ───────────────────────────────────────── */}
+        {!loading && shippers.length > 0 && (
+          <div className="stats-grid" style={{ marginBottom: 20 }}>
+            {[
+              { label: 'Total',     val: shippers.length,                                             cls: '' },
+              { label: 'Active',    val: shippers.filter(s => s.status === 'ACTIVE').length,    cls: 'status-created'   },
+              { label: 'Inactive',  val: shippers.filter(s => s.status === 'INACTIVE').length,  cls: 'status-pending'   },
+              { label: 'Suspended', val: shippers.filter(s => s.status === 'SUSPENDED').length, cls: 'status-cancelled' },
+            ].map(({ label, val, cls }) => (
+              <div className="stat-card" key={label}>
+                <div className="stat-value">{val}</div>
+                <div className="stat-label">
+                  {cls ? <span className={`status-badge ${cls}`}>{label}</span> : label}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
+        )}
 
-          {loading ? (
-            <div className="empty-state">Loading shippers…</div>
-          ) : (
-            <div className="table-wrapper">
-              <table className="bookings-table">
-                <thead>
-                  <tr>
-                    <th>Shipper ID</th>
-                    <th>Name</th>
-                    <th>Contact Info</th>
-                    <th>Account Terms</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="empty-state">
-                        {shippers.length === 0
-                          ? 'No shippers yet. Click + Add Shipper to create the first one.'
-                          : 'No shippers match your search.'}
+        {/* ── Search ──────────────────────────────────────── */}
+        {shippers.length > 0 && (
+          <div className="filters-row" style={{ marginBottom: 16 }}>
+            <input
+              className="search-input"
+              placeholder="🔍  Search shippers by name or contact…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* ── Table ───────────────────────────────────────── */}
+        {loading ? (
+          <div className="empty-state">Loading shippers…</div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-state">
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🏢</div>
+            {search
+              ? <p>No shippers match "{search}".</p>
+              : <p>No shippers yet. Click <strong>+ Add Shipper</strong> to create the first one.</p>
+            }
+          </div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="bookings-table">
+              <thead>
+                <tr>
+                  <th>Shipper ID</th>
+                  <th>Name</th>
+                  <th>Contact Info</th>
+                  <th>Account Terms</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((s) => {
+                  const sc = STATUS_CONFIG[s.status] || { label: s.status, cls: 'status-pending' };
+                  return (
+                    <tr key={s.shipperID}>
+                      <td>
+                        <span className="booking-id">
+                          SH{String(s.shipperID).padStart(3, '0')}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{s.name}</td>
+                      <td>{s.contactInfo || '–'}</td>
+                      <td>{s.accountTerms || '–'}</td>
+                      <td>
+                        <span className={`status-badge ${sc.cls}`}>{sc.label}</span>
+                      </td>
+                      <td>
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '4px 14px', fontSize: 12 }}
+                          onClick={() => openEdit(s)}
+                        >
+                          Edit
+                        </button>
                       </td>
                     </tr>
-                  ) : (
-                    filtered.map((s) => {
-                      const sc = STATUS_CONFIG[s.status] || { label: s.status, cls: 'status-pending' };
-                      return (
-                        <tr key={s.shipperID} className="table-row">
-                          <td className="booking-id-cell">SH{String(s.shipperID).padStart(3, '0')}</td>
-                          <td style={{ fontWeight: 600 }}>{s.name}</td>
-                          <td>{s.contactInfo || '–'}</td>
-                          <td>{s.accountTerms || '–'}</td>
-                          <td>
-                            <span className={`status-badge ${sc.cls}`}>{sc.label}</span>
-                          </td>
-                          <td>
-                            <button className="btn-view" onClick={() => openEditForm(s)}>
-                              Edit
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
       </div>
     </Layout>

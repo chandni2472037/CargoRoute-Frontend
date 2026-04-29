@@ -2,8 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { createBooking, getAllShippers } from '../../api/bookingsApi';
-import { SITES, HANDLING_FLAGS } from '../../utils/constants';
 import '../../styles/Bookings.css';
+
+// Static sites – numeric IDs must match what's in the DB
+const SITES = [
+  { id: 1, name: 'Mumbai Warehouse' },
+  { id: 2, name: 'Delhi Distribution Center' },
+  { id: 3, name: 'Bengaluru Depot' },
+  { id: 4, name: 'Chennai Hub' },
+  { id: 5, name: 'Hyderabad Facility' },
+  { id: 6, name: 'Kolkata Depot' },
+  { id: 7, name: 'Pune Terminal' },
+  { id: 8, name: 'Ahmedabad Crossdock' },
+];
+
+const HANDLING_FLAGS = [
+  { key: 'FRAGILE',               label: 'Fragile' },
+  { key: 'HEAVY',                 label: 'Heavy' },
+  { key: 'HAZMAT',                label: 'Hazmat' },
+  { key: 'TEMPERATURE_CONTROLLED',label: 'Temperature Controlled' },
+  { key: 'HIGH_VALUE',            label: 'High Value' },
+];
 
 const EMPTY_FORM = {
   shipperID: '',
@@ -21,7 +40,7 @@ const EMPTY_FORM = {
   status: 'SUBMITTED',
 };
 
-function validateBookingForm(form) {
+function validate(form) {
   const err = {};
   if (!form.shipperID)         err.shipperID         = 'Shipper is required';
   if (!form.originSiteID)      err.originSiteID      = 'Origin site is required';
@@ -69,7 +88,7 @@ export default function NewBooking() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const errs = validateBookingForm(form);
+    const errs = validate(form);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setSubmitting(true);
     setMessage({ type: '', text: '' });
@@ -223,18 +242,21 @@ export default function NewBooking() {
             </div>
           </div>
 
-          {/* ── Message & Submit ─────────────────────────────── */}
-          {message.text && (
-            <div className={`auth-message auth-message-${message.type}`} style={{ marginBottom: 14 }}>
-              <span>{message.type === 'success' ? '✔' : '⚠'}</span> {message.text}
+          {/* ── Actions ─────────────────────────────────────────── */}
+          <div className="form-section">
+            <h2 className="form-section-title">Actions</h2>
+            {message.text && (
+              <div className={`auth-message auth-message-${message.type}`} style={{ marginBottom: 14 }}>
+                <span>{message.type === 'success' ? '✔' : '⚠'}</span> {message.text}
+              </div>
+            )}
+            <div className="action-buttons">
+              <button type="submit" className="btn-primary btn-full" disabled={submitting}>
+                💾 {submitting ? 'Creating…' : 'Create Booking'}
+              </button>
+              <button type="button" className="btn-secondary btn-full"
+                onClick={() => navigate('/bookings')}>Cancel</button>
             </div>
-          )}
-          <div className="form-actions-row">
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              💾 {submitting ? 'Creating…' : 'Create Booking'}
-            </button>
-            <button type="button" className="btn-secondary"
-              onClick={() => navigate('/bookings')}>Cancel</button>
           </div>
         </form>
       </div>

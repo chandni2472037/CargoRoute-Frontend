@@ -3,8 +3,19 @@ import { loginUser } from "../api/authApi";
 import { AuthContext } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getUserFromToken } from "../utils/jwtUtils";
-import { ROLE_REDIRECT } from "../utils/constants";
 import "../styles/Auth.css";
+
+// Map role → landing page
+const ROLE_REDIRECT = {
+  Admin:          '/fleet/vehicles',
+  Dispatcher:     '/fleet/vehicles',
+  FleetManager:   '/fleet/vehicles',
+  Shipper:        '/bookings',
+  Driver:         '/bookings',
+  WarehouseManager: '/bookings',
+  BillingClerk:   '/bookings',
+  Analyst:        '/bookings',
+};
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });

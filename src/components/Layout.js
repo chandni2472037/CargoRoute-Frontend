@@ -5,7 +5,7 @@ import { AuthContext } from '../auth/AuthContext';
 import '../styles/Layout.css';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',       icon: '⊞',  path: '/dashboard' },
+  { label: 'Dashboard', icon: '⊞', path: '/dashboard' },
   {
     label: 'Bookings',
     icon: '📦',
@@ -16,38 +16,29 @@ const NAV_ITEMS = [
       { label: 'Shippers',     path: '/shippers' },
     ],
   },
-  { label: 'Vehicles & Fleet', icon: '🚚', path: '/vehicles' },
-  { label: 'Route Planning',   icon: '🗺️', path: '/routes' },
   {
-    label: 'Dispatch',
-    icon: '📤',
-    path: '/dispatch',
+    label: 'Fleet Management',
+    icon: '🚚',
+    path: '/fleet/vehicles',
     children: [
-      { label: 'All Dispatches', path: '/dispatch' },
-      { label: 'New Dispatch',   path: '/dispatch/new' },
-      { label: 'Drivers',        path: '/drivers' },
+      { label: 'Fleet Registry', path: '/fleet/vehicles' },
+      { label: 'Add Vehicle',    path: '/fleet/vehicles/new' },
     ],
   },
   {
-    label: 'Manifests & POD',
-    icon: '📄',
-    path: '/manifests',
+    label: 'Route Optimization',
+    icon: '🗺️',
+    path: '/routing/routes',
     children: [
-      { label: 'All Manifests',     path: '/manifests' },
-      { label: 'New Manifest',      path: '/manifests/new' },
-      { label: 'Proof of Delivery', path: '/pod' },
+      { label: 'Route Optimization', path: '/routing/routes' },
+      { label: 'Load Planning',      path: '/routing/load-planning' },
+      { label: 'Routing Rules',      path: '/routing/rules' },
     ],
   },
-  {
-    label: 'Exceptions & Claims',
-    icon: '⚠️',
-    path: '/exceptions',
-    children: [
-      { label: 'All Exceptions',   path: '/exceptions' },
-      { label: 'Report Exception', path: '/exceptions/new' },
-      { label: 'Claims',           path: '/claims' },
-    ],
-  },
+  { label: 'Dispatch', icon: '📤', path: '/dispatch' },
+  { label: 'Driver Portal', icon: '👤', path: '/drivers' },
+  { label: 'Manifests & POD', icon: '📄', path: '/manifests' },
+  { label: 'Exceptions & Claims', icon: '⚠️', path: '/exceptions' },
 ];
 
 export default function Layout({ children }) {
@@ -55,7 +46,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const { user, logoutUser } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [expandedMenus, setExpandedMenus] = useState({ '/bookings': true, '/exceptions': true, '/dispatch': false, '/manifests': false });
+  const [expandedMenus, setExpandedMenus] = useState({ '/bookings': true });
 
   const toggleMenu = (path) => {
     setExpandedMenus((prev) => ({ ...prev, [path]: !prev[path] }));

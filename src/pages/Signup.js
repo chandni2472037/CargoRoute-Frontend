@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { signupUser } from "../api/authApi";
 import { useNavigate } from "react-router-dom";
-import { USER_ROLES } from "../utils/constants";
 import "../styles/Auth.css";
 
 export default function Signup() {
@@ -68,7 +67,14 @@ export default function Signup() {
           <select
             onChange={e => setForm({ ...form, role: e.target.value })}
           >
-            {USER_ROLES.map((r) => <option key={r}>{r}</option>)}
+            <option>Dispatcher</option>
+            <option>Shipper</option>
+            <option>Driver</option>
+            <option>WarehouseManager</option>
+            <option>BillingClerk</option>
+            <option>FleetManager</option>
+            <option>Analyst</option>
+            <option>Admin</option>
           </select>
 
           <input
