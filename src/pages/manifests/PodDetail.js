@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import { getAllPods, updatePod, deletePod } from '../../api/manifestApi';
+import { getAllPods, updatePod, deletePod, uploadManifestFile } from '../../api/manifestApi';
 import { getBookingById } from '../../api/bookingsApi';
 import { POD_STATUS_CONFIG, POD_TYPE_CONFIG, siteName } from '../../utils/constants';
 import '../../styles/Bookings.css';
+import '../../styles/DispatchManifests.css';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatPodId(id)     { return id ? `POD${String(id).padStart(4, '0')}` : '–'; }
@@ -14,8 +15,19 @@ function formatDateTime(dt) {
   return new Date(dt).toLocaleString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
+}// Convert ISO datetime → datetime-local input format (YYYY-MM-DDTHH:mm)
+function toDatetimeLocal(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  if (isNaN(d)) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
+// Convert datetime-local string to LocalDateTime format WITHOUT UTC conversion
+function toLocalDateTime(val) {
+  if (!val) return null;
+  return val.length === 16 ? val + ':00' : val;
+}
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function PodDetail() {
   const { id }   = useParams();
@@ -32,6 +44,10 @@ export default function PodDetail() {
   const [formErrors, setFormErrors] = useState({});
   const [saving,     setSaving]     = useState(false);
   const [msg,        setMsg]        = useState({ type: '', text: '' });
+
+  // Image upload
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const [imgFileName,  setImgFileName]  = useState('');
 
   // Delete
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -62,10 +78,11 @@ export default function PodDetail() {
 
         setPodData(pod);
         setEditFields({
-          receivedBy: pod.receivedBy || '',
-          podType:    pod.podType    || 'Photo',
-          status:     pod.status     || 'PENDING',
-          podURI:     pod.podURI     || '',
+          receivedBy:  pod.receivedBy || '',
+          podType:     pod.podType    || 'Photo',
+          status:      pod.status     || 'PENDING',
+          podURI:      pod.podURI     || '',
+          deliveredAt: toDatetimeLocal(pod.deliveredAt),
         });
 
         // If booking came embedded, use it; otherwise fetch separately
@@ -89,27 +106,51 @@ export default function PodDetail() {
   }, [id]);
 
   // ── Edit handlers ───────────────────────────────────────────────────────────
+  const NAME_FIELDS = ['receivedBy'];
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditFields((prev) => ({ ...prev, [name]: value }));
+    const sanitized = NAME_FIELDS.includes(name) ? value.replace(/[^a-zA-Z0-9 ]/g, '') : value;
+    setEditFields((prev) => ({ ...prev, [name]: sanitized }));
     if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
+
+  const MAX_IMG_MB = 2;
+  const MAX_IMG_SIZE = MAX_IMG_MB * 1024 * 1024;
+  const handleImgChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > MAX_IMG_SIZE) {
+      setMsg({ type: 'error', text: `File too large. Maximum image size is ${MAX_IMG_MB} MB (your file: ${(file.size / (1024 * 1024)).toFixed(2)} MB). Please choose a smaller file.` });
+      e.target.value = '';
+      return;
+    }
+    setImgFileName(file.name);
+    setMsg({ type: '', text: '' });
+    setUploadingImg(true);
+    uploadManifestFile(file)
+      .then((res) => {
+        setEditFields((prev) => ({ ...prev, podURI: res.manifestURI }));
+        setMsg({ type: 'success', text: 'Image uploaded — click Save Changes to apply.' });
+      })
+      .catch(() => setMsg({ type: 'error', text: 'Image upload failed. Ensure ManifestService (port 8001) is running.' }))
+      .finally(() => setUploadingImg(false));
   };
 
   const handleSave = async () => {
     const errs = {};
     if (!editFields.receivedBy.trim()) errs.receivedBy = 'Received By is required.';
-    if (!editFields.podType)           errs.podType    = 'POD Type is required.';
     if (!editFields.status)            errs.status     = 'Status is required.';
     if (Object.keys(errs).length > 0)  { setFormErrors(errs); return; }
 
     setSaving(true);
     try {
       const payload = {
-        bookingID:  podData.bookingID,
-        receivedBy: editFields.receivedBy.trim(),
-        podType:    editFields.podType,
-        status:     editFields.status,
-        podURI:     editFields.podURI.trim() || null,
+        bookingID:   podData.bookingID,
+        receivedBy:  editFields.receivedBy.trim(),
+        podType:     podData.podType,
+        status:      editFields.status,
+        podURI:      editFields.podURI.trim() || null,
+        deliveredAt: podData.deliveredAt || null,
       };
       await updatePod(podData.podID, payload);
       // Re-fetch to keep data consistent
@@ -148,7 +189,7 @@ export default function PodDetail() {
   if (loading) {
     return (
       <Layout>
-        <div className="booking-detail-page">
+        <div className="booking-detail-page manifests-page">
           <div className="empty-state" style={{ padding: '60px 0' }}>
             ⏳ Loading POD details…
           </div>
@@ -160,7 +201,7 @@ export default function PodDetail() {
   if (error) {
     return (
       <Layout>
-        <div className="booking-detail-page">
+        <div className="booking-detail-page manifests-page">
           <div className="detail-header">
             <div className="detail-header-left">
               <button className="back-btn" onClick={() => navigate('/pod')}>←</button>
@@ -181,7 +222,7 @@ export default function PodDetail() {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <Layout>
-      <div className="booking-detail-page">
+      <div className="booking-detail-page manifests-page">
 
         {/* ── Page Header ──────────────────────────────────────────────────── */}
         <div className="detail-header">
@@ -212,49 +253,13 @@ export default function PodDetail() {
         {/* ════════════════════ VIEW MODE ════════════════════════════════════ */}
         {!isEditing && (
           <>
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button className="btn-primary" onClick={() => setIsEditing(true)}>
-                ✏ Edit POD
-              </button>
-              {!confirmDelete ? (
-                <button
-                  className="btn-view"
-                  style={{ background: '#fee2e2', color: '#b91c1c' }}
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  🗑 Delete POD
-                </button>
-              ) : (
-                <>
-                  <span style={{ alignSelf: 'center', fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>
-                    Are you sure?
-                  </span>
-                  <button
-                    className="btn-view"
-                    style={{ background: '#b91c1c', color: '#fff' }}
-                    onClick={handleDelete}
-                    disabled={deleting}
-                  >
-                    {deleting ? 'Deleting…' : 'Confirm Delete'}
-                  </button>
-                  <button
-                    className="btn-view"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={deleting}
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
 
             <div className="detail-grid">
 
               {/* ── Section 1 : POD Information ──────────────────────────── */}
               <div className="detail-card">
                 <h3 className="detail-card-title" style={{ marginBottom: 20 }}>
-                  📄 Section 1 — POD Information
+                  📄 Proof of Delivery Information
                 </h3>
 
                 <div className="detail-row" style={{ marginBottom: 14 }}>
@@ -294,17 +299,24 @@ export default function PodDetail() {
                   <div className="detail-label">POD Document</div>
                   <div style={{ marginTop: 8 }}>
                     {podData?.podURI ? (
-                      <a
-                        href={podData.podURI}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn-view"
-                        style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      >
-                        📎 View / Download Document
-                      </a>
+                      <>
+                        <img
+                          src={podData.podURI.startsWith('/') ? `http://localhost:8001${podData.podURI}` : podData.podURI}
+                          alt="POD"
+                          style={{ maxWidth: 240, maxHeight: 180, borderRadius: 6, border: '1px solid #e5e7eb', display: 'block', marginBottom: 6 }}
+                        />
+                        <a
+                          href={podData.podURI.startsWith('/') ? `http://localhost:8001${podData.podURI}` : podData.podURI}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-view"
+                          style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        >
+                          View Full Image
+                        </a>
+                      </>
                     ) : (
-                      <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No document attached</span>
+                      <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No image attached</span>
                     )}
                   </div>
                 </div>
@@ -313,7 +325,7 @@ export default function PodDetail() {
               {/* ── Section 2 : Associated Booking Details ────────────────── */}
               <div className="detail-card">
                 <h3 className="detail-card-title" style={{ marginBottom: 20 }}>
-                  📦 Section 2 — Associated Booking Details
+                  📦 Associated Booking Details
                 </h3>
 
                 <div className="detail-row" style={{ marginBottom: 14 }}>
@@ -367,6 +379,7 @@ export default function PodDetail() {
               </div>
 
             </div>
+
           </>
         )}
 
@@ -392,21 +405,6 @@ export default function PodDetail() {
               </div>
 
               <div className="form-field">
-                <label>POD Type <span className="required">*</span></label>
-                <select
-                  name="podType"
-                  value={editFields.podType}
-                  onChange={handleChange}
-                  className={formErrors.podType ? 'input-error' : ''}
-                >
-                  {Object.entries(POD_TYPE_CONFIG).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
-                </select>
-                {formErrors.podType && <span className="error-msg">{formErrors.podType}</span>}
-              </div>
-
-              <div className="form-field">
                 <label>Verification Status <span className="required">*</span></label>
                 <select
                   name="status"
@@ -422,14 +420,36 @@ export default function PodDetail() {
               </div>
 
               <div className="form-field">
-                <label>POD Document URI</label>
-                <input
-                  type="url"
-                  name="podURI"
-                  placeholder="https://… (photo or signature URL)"
-                  value={editFields.podURI}
-                  onChange={handleChange}
-                />
+                <label>POD Image (JPG / PNG)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <label style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    background: '#3b82f6', color: '#fff', padding: '7px 14px',
+                    borderRadius: 6, cursor: uploadingImg ? 'not-allowed' : 'pointer',
+                    fontSize: 13, fontWeight: 500, opacity: uploadingImg ? 0.7 : 1,
+                  }}>
+                    {uploadingImg ? 'Uploading…' : 'Choose Image'}
+                    <input type="file" accept="image/jpeg,image/png"
+                      style={{ display: 'none' }}
+                      disabled={uploadingImg || saving}
+                      onChange={handleImgChange} />
+                  </label>
+                  {imgFileName && (
+                    <span style={{ fontSize: 12, color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {imgFileName}
+                    </span>
+                  )}
+                  {editFields.podURI && !uploadingImg && (
+                    <img
+                      src={editFields.podURI.startsWith('/') ? `http://localhost:8001${editFields.podURI}` : editFields.podURI}
+                      alt="preview"
+                      style={{ height: 56, borderRadius: 4, border: '1px solid #e5e7eb' }}
+                    />
+                  )}
+                </div>
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280' }}>
+                  Note: Only JPG / PNG images are accepted. Maximum file size is <strong>2 MB</strong>.
+                </p>
               </div>
 
               {msg.text && (

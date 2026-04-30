@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import { getAllDispatches } from '../../api/dispatchApi';
+import { getAllDispatches, deleteDispatch } from '../../api/dispatchApi';
 import { DISPATCH_STATUS_CONFIG } from '../../utils/constants';
 import '../../styles/Bookings.css';
+import '../../styles/DispatchManifests.css';
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 
@@ -25,6 +26,8 @@ function formatDateTime(dt) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 4;
+
 export default function DispatchList() {
   const navigate = useNavigate();
 
@@ -33,6 +36,20 @@ export default function DispatchList() {
   const [error, setError]           = useState('');
   const [search, setSearch]         = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage]   = useState(1);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const loadDispatches = useCallback(() => {
     setLoading(true);
@@ -65,6 +82,13 @@ export default function DispatchList() {
     return matchSearch && matchStatus;
   });
 
+  // Reset to page 1 when filters change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   // ── Stats ─────────────────────────────────────────────────────────────────
 
   const stats = {
@@ -74,11 +98,18 @@ export default function DispatchList() {
     completed:  dispatches.filter((i) => i.dispatch?.status === 'COMPLETED').length,
   };
 
+  const handleDelete = (e, id) => {
+    e.stopPropagation();
+    setOpenMenuId(null);
+    if (!window.confirm('Delete this dispatch? This cannot be undone.')) return;
+    deleteDispatch(id).then(loadDispatches).catch(() => setError('Delete failed.'));
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <Layout>
-      <div className="bookings-page">
+      <div className="bookings-page dispatch-page">
 
         {/* ── Header ── */}
         <div className="page-header">
@@ -88,8 +119,8 @@ export default function DispatchList() {
               Assign loads to drivers and track dispatch status
             </p>
           </div>
-          <button className="btn-primary" onClick={() => navigate('/dispatch/new')}>
-            + New Dispatch
+          <button className="btn-primary expand-btn" title="New Dispatch" onClick={() => navigate('/dispatch/new')}>
+            <span className="expand-btn-icon">+</span><span className="expand-btn-label">New Dispatch</span>
           </button>
         </div>
 
@@ -167,24 +198,26 @@ export default function DispatchList() {
                     <th>Assigned By</th>
                     <th>Assigned At</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.length === 0 ? (
+                  {paginated.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="empty-state">
+                      <td colSpan={8} className="empty-state">
                         {dispatches.length === 0
                           ? 'No dispatches yet. Create one to get started.'
                           : 'No dispatches match your search.'}
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((item) => {
+                    paginated.map((item) => {
                       const d  = item.dispatch || {};
                       const l  = item.load     || {};
                       const v  = item.vehicle  || {};
                       const dr = v.driver      || {};
                       const st = DISPATCH_STATUS_CONFIG[d.status] || { label: d.status, cls: '' };
+                      const isOpen = openMenuId === d.dispatchID;
 
                       return (
                         <tr
@@ -217,12 +250,34 @@ export default function DispatchList() {
                           <td>
                             <span className={`status-badge ${st.cls}`}>{st.label}</span>
                           </td>
+                          <td className="actions-cell" onClick={(e) => e.stopPropagation()} ref={isOpen ? menuRef : null}>
+                            <button
+                              className="actions-menu-btn"
+                              onClick={(e) => { e.stopPropagation(); setOpenMenuId(isOpen ? null : d.dispatchID); }}
+                              title="Actions"
+                            >…</button>
+                            {isOpen && (
+                              <div className="actions-dropdown">
+                                <button className="actions-dropdown-item" onClick={() => { setOpenMenuId(null); navigate(`/dispatch/${d.dispatchID}`); }}>👁 View</button>
+                                <button className="actions-dropdown-item actions-dropdown-danger" onClick={(e) => handleDelete(e, d.dispatchID)}>🗑 Delete</button>
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       );
                     })
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* ── Pagination ── */}
+          {totalPages > 1 && (
+            <div className="pagination-bar">
+              <button className="page-btn" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>‹ Prev</button>
+              <span className="page-info">Page {currentPage} of {totalPages}</span>
+              <button className="page-btn" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next ›</button>
             </div>
           )}
         </div>

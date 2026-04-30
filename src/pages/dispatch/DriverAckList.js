@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import {
   getAllAcknowledgements,
   createAcknowledgement,
   updateAcknowledgement,
-  deleteAcknowledgement,
   getAllDispatches,
   getAllDrivers,
 } from '../../api/dispatchApi';
 import { DISPATCH_STATUS_CONFIG, DRIVER_STATUS_CONFIG } from '../../utils/constants';
 import '../../styles/Bookings.css';
+import '../../styles/DispatchManifests.css';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,8 @@ const EMPTY_FORM = { dispatchID: '', driverID: '', notes: '' };
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 4;
+
 export default function DriverAckList() {
   const navigate = useNavigate();
 
@@ -45,6 +47,7 @@ export default function DriverAckList() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [search, setSearch]     = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // dropdowns
   const [dispatches, setDispatches] = useState([]);
@@ -57,9 +60,21 @@ export default function DriverAckList() {
   const [formErrors, setFormErrors]   = useState({});
   const [saving, setSaving]           = useState(false);
   const [formApiError, setFormApiError] = useState('');
+  const [formSuccessMessage, setFormSuccessMessage] = useState('');
 
-  // delete confirm
-  const [deletingId, setDeletingId] = useState(null);
+  // actions menu
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // ── Loaders ──────────────────────────────────────────────────────────────
 
@@ -90,6 +105,16 @@ export default function DriverAckList() {
     return dispId.includes(q) || driverName.includes(q) || loadCode.includes(q) || notes.includes(q);
   });
 
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  // ── Pagination ───────────────────────────────────────────────────────────
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   // ── Stats ─────────────────────────────────────────────────────────────────
 
   const stats = {
@@ -103,6 +128,12 @@ export default function DriverAckList() {
     unique:  new Set(acks.map((a) => a.driver?.driverID).filter(Boolean)).size,
   };
 
+  // Show all dispatches that are not yet completed or cancelled
+  const ACK_INELIGIBLE_STATUSES = ['COMPLETED', 'CANCELLED'];
+  const eligibleDispatches = dispatches.filter(
+    (d) => !ACK_INELIGIBLE_STATUSES.includes((d.dispatch || {}).status)
+  );
+
   // ── Form handlers ─────────────────────────────────────────────────────────
 
   const openAdd = () => {
@@ -110,6 +141,7 @@ export default function DriverAckList() {
     setFormFields(EMPTY_FORM);
     setFormErrors({});
     setFormApiError('');
+    setSaving(false);
     setShowForm(true);
   };
 
@@ -127,13 +159,25 @@ export default function DriverAckList() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormFields((prev) => ({ ...prev, [name]: value }));
+    setFormFields((prev) => {
+      const next = { ...prev, [name]: value };
+      // Auto-fill assigned driver when a dispatch is chosen
+      if (name === 'dispatchID' && value) {
+        const selected = dispatches.find(
+          (d) => String((d.dispatch || {}).dispatchID) === String(value)
+        );
+        const assignedDriverID = selected?.dispatch?.assignedDriverID;
+        if (assignedDriverID) next.driverID = String(assignedDriverID);
+      }
+      return next;
+    });
     if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setFormApiError('');
+    setFormSuccessMessage('');
     const validationErrors = validateForm(formFields);
     if (Object.keys(validationErrors).length > 0) {
       setFormErrors(validationErrors);
@@ -153,29 +197,27 @@ export default function DriverAckList() {
 
     apiCall
       .then(() => {
-        setShowForm(false);
-        loadData();
+        const action = editingId ? 'updated' : 'added';
+        setFormSuccessMessage(`Acknowledgement ${action} successfully!`);
+        setTimeout(() => {
+          setShowForm(false);
+          setFormSuccessMessage('');
+          setFormApiError('');
+          loadData();
+        }, 1500);
       })
       .catch((err) => {
         const msg = err?.response?.data?.message || err?.response?.data || 'Save failed.';
         setFormApiError(String(msg));
-        setSaving(false);
-      });
-  };
-
-  // ── Delete ────────────────────────────────────────────────────────────────
-
-  const handleDelete = (id) => {
-    deleteAcknowledgement(id)
-      .then(() => { setDeletingId(null); loadData(); })
-      .catch(() => setDeletingId(null));
+      })
+      .finally(() => setSaving(false));
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <Layout>
-      <div className="bookings-page">
+      <div className="bookings-page dispatch-page">
 
         {/* ── Header ── */}
         <div className="page-header">
@@ -183,8 +225,8 @@ export default function DriverAckList() {
             <h1 className="page-title">Driver Acknowledgements</h1>
             <p className="page-subtitle">Track driver acceptance of dispatch assignments</p>
           </div>
-          <button className="btn-primary" onClick={openAdd}>
-            + Record Acknowledgement
+          <button className="btn-primary expand-btn" title="Record Acknowledgement" onClick={openAdd}>
+            <span className="expand-btn-icon">+</span><span className="expand-btn-label">Record Acknowledgement</span>
           </button>
         </div>
 
@@ -239,27 +281,23 @@ export default function DriverAckList() {
                 <thead>
                   <tr>
                     <th>Ack ID</th>
-                    <th>Dispatch</th>
-                    <th>Load Code</th>
                     <th>Driver</th>
-                    <th>Driver Status</th>
-                    <th>Dispatch Status</th>
+                    <th>Dispatch</th>
                     <th>Acknowledged At</th>
-                    <th>Notes</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="empty-state">
+                      <td colSpan={5} className="empty-state">
                         {acks.length === 0
                           ? 'No acknowledgements recorded yet.'
                           : 'No results match your search.'}
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((ack) => {
+                    paginated.map((ack) => {
                       const dispatch   = ack.dispatch?.dispatch || {};
                       const load       = ack.dispatch?.load     || {};
                       const driver     = ack.driver             || {};
@@ -276,47 +314,23 @@ export default function DriverAckList() {
                           <td className="booking-id-cell">
                             ACK{String(ack.ackID).padStart(4, '0')}
                           </td>
+                          <td>{driver.name || '–'}</td>
                           <td className="booking-id-cell">
                             {formatDispatchId(dispatch.dispatchID)}
                           </td>
-                          <td>{load.loadCode || '–'}</td>
-                          <td>{driver.name   || '–'}</td>
-                          <td>
-                            <span className={`status-badge ${drSt.cls}`}>{drSt.label}</span>
-                          </td>
-                          <td>
-                            <span className={`status-badge ${dSt.cls}`}>{dSt.label}</span>
-                          </td>
                           <td>{formatDateTime(ack.ackAt)}</td>
-                          <td style={{ maxWidth: 180, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {ack.notes || '–'}
-                          </td>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button className="btn-view" onClick={() => openEdit(ack)}>Edit</button>
-                              {deletingId === ack.ackID ? (
-                                <>
-                                  <button
-                                    className="btn-view"
-                                    style={{ background: '#fee2e2', color: '#b91c1c' }}
-                                    onClick={() => handleDelete(ack.ackID)}
-                                  >
-                                    Confirm
-                                  </button>
-                                  <button className="btn-view" onClick={() => setDeletingId(null)}>
-                                    Cancel
-                                  </button>
-                                </>
-                              ) : (
-                                <button
-                                  className="btn-view"
-                                  style={{ background: '#fee2e2', color: '#b91c1c' }}
-                                  onClick={() => setDeletingId(ack.ackID)}
-                                >
-                                  Delete
-                                </button>
-                              )}
-                            </div>
+                          <td className="actions-cell" onClick={(e) => e.stopPropagation()} ref={openMenuId === ack.ackID ? menuRef : null}>
+                            <button
+                              className="actions-menu-btn"
+                              title="Actions"
+                              onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === ack.ackID ? null : ack.ackID); }}
+                            >…</button>
+                            {openMenuId === ack.ackID && (
+                              <div className="actions-dropdown">
+                                <button className="actions-dropdown-item" onClick={() => { setOpenMenuId(null); openEdit(ack); }}>✏️ Edit</button>
+                                <button className="actions-dropdown-item" onClick={() => { setOpenMenuId(null); navigate(`/dispatch/${dispatch.dispatchID}`); }}>👁 View Dispatch</button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -324,6 +338,15 @@ export default function DriverAckList() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* ── Pagination ── */}
+          {totalPages > 1 && (
+            <div className="pagination-bar">
+              <button className="page-btn" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>‹ Prev</button>
+              <span className="page-info">Page {currentPage} of {totalPages}</span>
+              <button className="page-btn" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next ›</button>
             </div>
           )}
         </div>
@@ -349,7 +372,7 @@ export default function DriverAckList() {
                   className={formErrors.dispatchID ? 'input-error' : ''}
                 >
                   <option value="">— Select dispatch —</option>
-                  {dispatches.map((d) => {
+                  {eligibleDispatches.map((d) => {
                     const dsp = d.dispatch || {};
                     const ld  = d.load     || {};
                     const st  = DISPATCH_STATUS_CONFIG[dsp.status] || { label: dsp.status };
@@ -361,6 +384,9 @@ export default function DriverAckList() {
                       </option>
                     );
                   })}
+                  {eligibleDispatches.length === 0 && (
+                    <option disabled value="">No active dispatches available</option>
+                  )}
                 </select>
                 {formErrors.dispatchID && <span className="error-msg">{formErrors.dispatchID}</span>}
               </div>
@@ -372,6 +398,7 @@ export default function DriverAckList() {
                   value={formFields.driverID}
                   onChange={handleChange}
                   className={formErrors.driverID ? 'input-error' : ''}
+                  disabled={!!formFields.dispatchID && !editingId}
                 >
                   <option value="">— Select driver —</option>
                   {drivers.map((dr) => {
@@ -384,6 +411,9 @@ export default function DriverAckList() {
                   })}
                 </select>
                 {formErrors.driverID && <span className="error-msg">{formErrors.driverID}</span>}
+                {formFields.dispatchID && !editingId && (
+                  <span className="ack-lock-notice">Auto-filled from dispatch — only the assigned driver may acknowledge.</span>
+                )}
               </div>
 
               <div className="form-field">
@@ -391,12 +421,19 @@ export default function DriverAckList() {
                 <textarea
                   name="notes"
                   rows={3}
+                  maxLength={300}
                   placeholder="Optional driver comments or remarks…"
                   value={formFields.notes}
                   onChange={handleChange}
                 />
+                <span className="field-hint" style={{ color: formFields.notes.length >= 280 ? '#ef4444' : '#94a3b8' }}>
+                  {formFields.notes.length}/300 characters
+                </span>
               </div>
 
+              {formSuccessMessage && (
+                <div className="auth-message auth-message-success">✔ {formSuccessMessage}</div>
+              )}
               {formApiError && (
                 <div className="auth-message auth-message-error">⚠ {formApiError}</div>
               )}

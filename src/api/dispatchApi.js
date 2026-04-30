@@ -28,9 +28,9 @@ export const createDispatch = (data) =>
 export const updateDispatch = (id, data) =>
   axios.put(`${BASE_URL}/cargoRoute/dispatches/updateDispatch/${id}`, data).then((r) => r.data);
 
-/** DELETE /cargoRoute/dispatches/DeleteDispatch/:id → 204 */
+/** DELETE /cargoRoute/dispatches/deleteDispatch/:id → 204 */
 export const deleteDispatch = (id) =>
-  axios.delete(`${BASE_URL}/cargoRoute/dispatches/DeleteDispatch/${id}`);
+  axios.delete(`${BASE_URL}/cargoRoute/dispatches/deleteDispatch/${id}`);
 
 // ── Drivers ──────────────────────────────────────────────────────────────────
 

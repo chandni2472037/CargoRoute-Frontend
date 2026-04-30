@@ -38,7 +38,7 @@
 
 /* ── Buttons ────────────────────────────────────────────────────── */
 .btn-primary {
-  background: #111827;
+  background: #3b82f6;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -52,7 +52,7 @@
   transition: background 0.15s;
   white-space: nowrap;
 }
-.btn-primary:hover    { background: #374151; }
+.btn-primary:hover    { background: #2563eb; }
 .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
 
 .btn-secondary {
@@ -160,40 +160,40 @@
 }
 
 .stat-card {
-  background: #fff;
-  border: 1px solid #e4e7ed;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 18px 20px;
+  padding: 14px 20px;
   display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  min-height: 58px;
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 12px;
   color: #94a3b8;
-  margin-bottom: 6px;
   font-weight: 500;
+  letter-spacing: 0.2px;
+  flex: 1;
 }
 
 .stat-value {
-  font-size: 34px;
+  font-size: 26px;
   font-weight: 700;
   color: #1a2b45;
   line-height: 1;
+  text-align: right;
+  flex-shrink: 0;
 }
 .stat-pending  { color: #d97706; }
 .stat-transit  { color: #16a34a; }
 .stat-delivered{ color: #6b7280; }
 
-.stat-icon {
-  position: absolute;
-  right: 18px;
-  top: 18px;
-  font-size: 22px;
-  opacity: 0.3;
-}
+.stat-icon { display: none; }
 
 /* ── Table section ──────────────────────────────────────────────── */
 .table-section {
@@ -288,14 +288,91 @@
 .bookings-table th {
   text-align: left;
   padding: 10px 14px;
-  background: #1f3a5f;
+  background: #3b82f6;
   color: #ffffff;
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  border-bottom: 1px solid #16304f;
+  border-bottom: 1px solid #2563eb;
   white-space: nowrap;
+}
+
+/* ── Actions cell dropdown ─────────────────────────────────── */
+.actions-cell {
+  position: relative;
+  width: 40px;
+  text-align: center;
+}
+.actions-menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #94a3b8;
+  padding: 2px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+.actions-menu-btn:hover { background: #f1f5f9; color: #1e3a8a; }
+.actions-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  min-width: 130px;
+  z-index: 500;
+  overflow: hidden;
+}
+.actions-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+.actions-dropdown-item:hover { background: #f8fafc; }
+.actions-dropdown-danger { color: #dc2626; }
+.actions-dropdown-danger:hover { background: #fef2f2; }
+
+/* ── Icon-only action button with native tooltip ─────────────── */
+.expand-btn {
+  background: #ffffff;
+  border: 1.5px solid #3b82f6 !important;
+  color: #1e3a8a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+}
+.expand-btn:hover {
+  background: #eff6ff;
+}
+.expand-btn-icon {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+/* Label hidden — text is surfaced via the button's title tooltip */
+.expand-btn-label {
+  display: none;
 }
 
 .bookings-table td {
@@ -561,7 +638,8 @@
   border: 1px solid #e4e7ed;
   border-radius: 10px;
   padding: 14px 20px;
-  margin-bottom: 18px;
+  margin-top: 28px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
@@ -601,7 +679,8 @@
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 28px;
+  margin-bottom: 28px;
 }
 
 @media (max-width: 700px) {

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import { AuthContext } from '../../auth/AuthContext';
 import {
   getDispatchById,
   updateDispatch,
@@ -11,6 +12,7 @@ import {
 } from '../../api/dispatchApi';
 import { DISPATCH_STATUS_CONFIG, DRIVER_STATUS_CONFIG, VEHICLE_TYPE_CONFIG } from '../../utils/constants';
 import '../../styles/Bookings.css';
+import '../../styles/DispatchManifests.css';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 
@@ -49,6 +51,9 @@ const EMPTY_ACK = { driverID: '', notes: '' };
 export default function DispatchDetail() {
   const { id }   = useParams();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const isDriver     = user?.role === 'Driver';
+  const isDispatcher = !isDriver;
 
   const [item, setItem]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +70,7 @@ export default function DispatchDetail() {
   const [assignedDriver, setAssignedDriver] = useState(null);
 
   // Acknowledgement
-  const [ack, setAck]               = useState(null);
+  const [ackList, setAckList]       = useState([]);
   const [ackLoading, setAckLoading] = useState(false);
   const [showAckForm, setShowAckForm] = useState(false);
   const [ackFields, setAckFields]   = useState(EMPTY_ACK);
@@ -100,8 +105,12 @@ export default function DispatchDetail() {
   const loadAck = useCallback(() => {
     setAckLoading(true);
     getAcknowledgementByDispatch(id)
-      .then(setAck)
-      .catch(() => setAck(null))
+      .then((data) => {
+        if (Array.isArray(data)) setAckList(data);
+        else if (data && data.ackID != null) setAckList([data]);
+        else setAckList([]);
+      })
+      .catch(() => setAckList([]))
       .finally(() => setAckLoading(false));
   }, [id]);
 
@@ -122,7 +131,7 @@ export default function DispatchDetail() {
     const payload = {
       loadID:           d.loadID,
       assignedDriverID: Number(newDriver) || d.assignedDriverID,
-      assignedBy:       newAssignedBy || d.assignedBy,
+      assignedBy:       d.assignedBy,
       status:           newStatus,
     };
 
@@ -152,6 +161,12 @@ export default function DispatchDetail() {
       return;
     }
 
+    // Enforce: only the assigned driver can acknowledge
+    if (Number(ackFields.driverID) !== Number(d.assignedDriverID)) {
+      setAckErrors({ driverID: 'Only the assigned driver can acknowledge this dispatch.' });
+      return;
+    }
+
     const payload = {
       dispatchID: Number(id),
       driverID:   Number(ackFields.driverID),
@@ -169,8 +184,8 @@ export default function DispatchDetail() {
       .catch((err) => {
         const msg = err?.response?.data?.message || err?.response?.data || 'Failed to record acknowledgement.';
         setAckApiError(String(msg));
-        setAckSaving(false);
-      });
+      })
+      .finally(() => setAckSaving(false));
   };
 
   // ── Loading / error ───────────────────────────────────────────────────────
@@ -200,81 +215,42 @@ export default function DispatchDetail() {
   const st = DISPATCH_STATUS_CONFIG[d.status] || { label: d.status, cls: '' };
   const drSt = DRIVER_STATUS_CONFIG[dr.status] || { label: dr.status, cls: '' };
   const vtCfg = VEHICLE_TYPE_CONFIG[v.type]    || { label: v.type || '–' };
+  const latestAck = ackList.length > 0 ? ackList[ackList.length - 1] : null;
+  const isAcked   = latestAck != null;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <Layout>
-      <div className="bookings-page booking-detail-page">
+      <div className="bookings-page booking-detail-page dispatch-page">
 
         {/* ── Header ── */}
         <div className="detail-header">
           <div className="detail-header-left">
-            <button className="btn-secondary" onClick={() => navigate('/dispatch')}>
-              ← Back
+            <button className="back-btn" onClick={() => navigate('/dispatch')} title="Back">
+              ←
             </button>
             <span className="detail-booking-id">{formatDispatchId(d.dispatchID)}</span>
             <span className={`status-badge status-badge-lg ${st.cls}`}>{st.label}</span>
           </div>
-          <button
-            className="btn-primary"
-            onClick={() => {
-              setShowAckForm(true);
-              setAckApiError('');
-              setAckErrors({});
-              // Pre-fill with the currently assigned driver
-              setAckFields({ driverID: String(d.assignedDriverID || ''), notes: '' });
-            }}
-          >
-            ✔ Record Acknowledgement
-          </button>
-        </div>
-
-        {/* ── Update Bar ── */}
-        <div className="status-update-bar">
-          <span className="status-update-label">Status:</span>
-          <select
-            className="status-update-select"
-            value={newStatus}
-            onChange={(e) => { setNewStatus(e.target.value); setStatusMsg(''); setStatusMsgError(''); }}
-          >
-            {Object.entries(DISPATCH_STATUS_CONFIG).map(([k, v]) => (
-              <option key={k} value={k}>{v.label}</option>
-            ))}
-          </select>
-
-          <span className="status-update-label">Driver:</span>
-          <select
-            className="status-update-select"
-            value={newDriver}
-            onChange={(e) => { setNewDriver(e.target.value); setStatusMsg(''); setStatusMsgError(''); }}
-          >
-            <option value="">— same driver —</option>
-            {drivers.map((dr) => (
-              <option key={dr.driverID} value={dr.driverID}>
-                {dr.name} ({dr.status})
-              </option>
-            ))}
-          </select>
-
-          <span className="status-update-label">Assigned By:</span>
-          <input
-            className="status-update-select"
-            style={{ minWidth: 140 }}
-            value={newAssignedBy}
-            onChange={(e) => { setNewAssignedBy(e.target.value); setStatusMsg(''); setStatusMsgError(''); }}
-            placeholder="Dispatcher name"
-          />
-
-          <button
-            className="btn-primary"
-            onClick={handleStatusUpdate}
-            disabled={updatingStatus}
-          >
-            {updatingStatus ? 'Saving…' : 'Apply'}
-          </button>
-          {statusMsg      && <span className="update-msg">{statusMsg}</span>}
-          {statusMsgError && <span className="update-msg-error">{statusMsgError}</span>}
+          {isDriver && (
+            <button
+              className="btn-primary"
+              disabled={isAcked}
+              title={isAcked ? 'Acknowledgement already recorded' : ''}
+              onClick={() => {
+                if (isAcked) return;
+                setShowAckForm(true);
+                setAckApiError('');
+                setAckErrors({});
+                setAckSaving(false);
+                // Pre-fill with the currently assigned driver
+                setAckFields({ driverID: String(d.assignedDriverID || ''), notes: '' });
+              }}
+            >
+              {isAcked ? '✔ Acknowledged' : '✔ Record Acknowledgement'}
+            </button>
+          )}
         </div>
 
         {/* ── Detail Grid ── */}
@@ -424,39 +400,80 @@ export default function DispatchDetail() {
               </div>
             )}
 
-            {!ackLoading && !ack && (
-              <div className="empty-state" style={{ padding: '20px 0' }}>
-                <div className="empty-text">No acknowledgement recorded</div>
-                <div className="empty-sub">
-                  Click "Record Acknowledgement" to capture the driver's acceptance.
+            {!ackLoading && !isAcked && (
+              <div className="ack-awaiting-banner">
+                <div className="ack-awaiting-title">⏳ Awaiting Acknowledgement</div>
+                <div className="ack-awaiting-sub">
+                  The assigned driver has not yet acknowledged this dispatch.
+                  Click "Record Acknowledgement" to capture acceptance.
                 </div>
               </div>
             )}
 
-            {!ackLoading && ack && (
+            {!ackLoading && isAcked && (
               <div className="detail-row-3">
                 <div className="detail-field">
                   <span className="detail-label">Ack ID</span>
-                  <span className="detail-value">ACK{String(ack.ackID).padStart(4, '0')}</span>
+                  <span className="detail-value">ACK{String(latestAck.ackID).padStart(4, '0')}</span>
                 </div>
                 <div className="detail-field">
                   <span className="detail-label">Driver</span>
-                  <span className="detail-value">{ack.driver?.name || '–'}</span>
+                  <span className="detail-value">{latestAck.driver?.name || '–'}</span>
                 </div>
                 <div className="detail-field">
                   <span className="detail-label">Acknowledged At</span>
-                  <span className="detail-value">{formatDateTime(ack.ackAt)}</span>
+                  <span className="detail-value" style={{ fontWeight: 600, color: '#16a34a' }}>
+                    ✔ {formatDateTime(latestAck.ackAt)}
+                  </span>
                 </div>
-                {ack.notes && (
+                {latestAck.notes && (
                   <div className="detail-field" style={{ gridColumn: '1 / -1' }}>
                     <span className="detail-label">Notes</span>
-                    <span className="detail-value">{ack.notes}</span>
+                    <span className="detail-value">{latestAck.notes}</span>
                   </div>
                 )}
               </div>
             )}
           </div>
         </div>
+
+        {/* ── Update Bar — Dispatcher only ── */}
+        {isDispatcher && <div className="status-update-bar">
+          <span className="status-update-label">Status:</span>
+          <select
+            className="status-update-select"
+            value={newStatus}
+            onChange={(e) => { setNewStatus(e.target.value); setStatusMsg(''); setStatusMsgError(''); }}
+          >
+            {Object.entries(DISPATCH_STATUS_CONFIG).map(([k, v]) => (
+              <option key={k} value={k}>{v.label}</option>
+            ))}
+          </select>
+
+          <span className="status-update-label">Driver:</span>
+          <select
+            className="status-update-select"
+            value={newDriver}
+            onChange={(e) => { setNewDriver(e.target.value); setStatusMsg(''); setStatusMsgError(''); }}
+          >
+            <option value="">— same driver —</option>
+            {drivers.map((dr) => (
+              <option key={dr.driverID} value={dr.driverID}>
+                {dr.name} ({dr.status})
+              </option>
+            ))}
+          </select>
+
+          <button
+            className="btn-primary"
+            onClick={handleStatusUpdate}
+            disabled={updatingStatus}
+          >
+            {updatingStatus ? 'Saving…' : 'Apply'}
+          </button>
+          {statusMsg      && <span className="update-msg">{statusMsg}</span>}
+          {statusMsgError && <span className="update-msg-error">{statusMsgError}</span>}
+        </div>}
 
         {/* ── Record Ack Slide-in Panel ── */}
         {showAckForm && (
@@ -480,15 +497,22 @@ export default function DispatchDetail() {
                     onChange={handleAckChange}
                     className={ackErrors.driverID ? 'input-error' : ''}
                   >
-                    <option value="">— Select driver —</option>
-                    {drivers.map((dr) => (
-                      <option key={dr.driverID} value={dr.driverID}>
-                        {dr.name} — {dr.licenseNo} ({dr.status})
-                        {dr.driverID === d.assignedDriverID ? ' ✔ Assigned' : ''}
-                      </option>
-                    ))}
+                    {/* Only the assigned driver can acknowledge */}
+                    {drivers
+                      .filter((dr) => dr.driverID === d.assignedDriverID)
+                      .map((dr) => (
+                        <option key={dr.driverID} value={dr.driverID}>
+                          {dr.name} — {dr.licenseNo} ✔ Assigned Driver
+                        </option>
+                      ))}
+                    {drivers.filter((dr) => dr.driverID === d.assignedDriverID).length === 0 && (
+                      <option value="" disabled>No assigned driver on this dispatch</option>
+                    )}
                   </select>
                   {ackErrors.driverID && <span className="error-msg">{ackErrors.driverID}</span>}
+                  <span className="ack-lock-notice">
+                    Only the assigned driver may acknowledge this dispatch.
+                  </span>
                 </div>
 
                 <div className="form-field">
@@ -496,10 +520,14 @@ export default function DispatchDetail() {
                   <textarea
                     name="notes"
                     rows={3}
+                    maxLength={300}
                     placeholder="Optional — driver comments or remarks on acceptance…"
                     value={ackFields.notes}
                     onChange={handleAckChange}
                   />
+                  <span className="field-hint" style={{ color: ackFields.notes.length >= 280 ? '#ef4444' : '#94a3b8' }}>
+                    {ackFields.notes.length}/300 characters
+                  </span>
                 </div>
 
                 {ackApiError && (

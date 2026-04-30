@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8000';
+const BASE_URL = process.env.REACT_APP_MANIFEST_URL || 'http://localhost:8000';
 
 // ── Manifests ─────────────────────────────────────────────────────────────────
 
@@ -27,6 +27,31 @@ export const getManifestsByWarehouse = (warehouseID) =>
 /** PUT /cargoRoute/manifests/updateManifest/:id → ManifestDTO */
 export const updateManifest = (id, data) =>
   axios.put(`${BASE_URL}/cargoRoute/manifests/updateManifest/${id}`, data).then((r) => r.data);
+
+/** Convert file to base64 data URL (used for POD edit where update endpoint is JSON-only) */
+export const uploadManifestFile = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve({ manifestURI: e.target.result });
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+
+/** POST /cargoRoute/manifests/createManifest (multipart: manifest JSON + file) → { manifestID, manifestURI } */
+export const createManifestWithFileApi = (manifestData, file) => {
+  const form = new FormData();
+  form.append('manifest', new Blob([JSON.stringify(manifestData)], { type: 'application/json' }));
+  form.append('file', file);
+  return axios.post(`${BASE_URL}/cargoRoute/manifests/createManifest`, form).then((r) => r.data);
+};
+
+/** POST /cargoRoute/proof-of-delivery/createProofOfDelivery (multipart: pod JSON + file) → { podID, podURI } */
+export const createPodWithImage = (podData, file) => {
+  const form = new FormData();
+  form.append('pod', new Blob([JSON.stringify(podData)], { type: 'application/json' }));
+  form.append('file', file);
+  return axios.post(`${BASE_URL}/cargoRoute/proof-of-delivery/createProofOfDelivery`, form).then((r) => r.data);
+};
 
 /** DELETE /cargoRoute/manifests/deleteByManifestId/:id → 204 */
 export const deleteManifest = (id) =>

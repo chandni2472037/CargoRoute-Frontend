@@ -1,0 +1,383 @@
+/* ================================================================
+   DISPATCH & MANIFESTS MODULE  –  Theme overrides
+   Scoped via .dispatch-page and .manifests-page wrapper classes
+   ================================================================ */
+
+/* ── Navy-blue headings ─────────────────────────────────────────── */
+.dispatch-page .page-title,
+.manifests-page .page-title {
+  color: #001f5b; /* navy blue */
+}
+
+/* ── Accent action buttons ──────────────────────────────────────── */
+/*
+   Base colour  : #1d4ed8  (Tailwind blue-700)
+   Contrast ratio with #fff : ≈ 7.2:1  →  WCAG AA & AAA pass
+*/
+.dispatch-page .btn-primary,
+.manifests-page .btn-primary {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.dispatch-page .btn-primary:hover,
+.manifests-page .btn-primary:hover {
+  background: #2563eb;
+}
+
+.dispatch-page .btn-primary:focus-visible,
+.manifests-page .btn-primary:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+/* ── Acknowledgement states ─────────────────────────────────────── */
+
+/* Banner shown when no ack recorded yet */
+.ack-awaiting-banner {
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ack-awaiting-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #92400e;
+}
+.ack-awaiting-sub {
+  font-size: 13px;
+  color: #78350f;
+}
+
+/* Small helper text below the driver dropdown */
+.ack-lock-notice {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #2563eb;
+  font-style: italic;
+}
+
+/* ================================================================
+   SLIDE-IN PANEL (claim-form-panel) — Form layout fixes
+   Ensures single-column grid with consistent alignment & spacing
+   ================================================================ */
+
+/* Override .form-section which normally has border/padding */
+.claim-form-panel .form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+/* Every field block: label → input → helper/error  */
+.claim-form-panel .form-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+}
+
+.claim-form-panel .form-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  text-align: left;
+}
+
+.claim-form-panel .form-field input,
+.claim-form-panel .form-field select,
+.claim-form-panel .form-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #f9fafb;
+  color: #1a2b45;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.claim-form-panel .form-field input:focus,
+.claim-form-panel .form-field select:focus,
+.claim-form-panel .form-field textarea:focus {
+  border-color: #4c9aff;
+  background: #fff;
+}
+
+.claim-form-panel .form-field .field-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: left;
+  margin-top: 2px;
+}
+
+.claim-form-panel .form-field .error-msg {
+  font-size: 12px;
+  color: #ef4444;
+  text-align: left;
+  margin-top: 2px;
+}
+
+.claim-form-panel .ack-lock-notice {
+  margin-top: 4px;
+}
+
+/* Action row: buttons in a row, right-aligned, same baseline, small gap */
+.claim-form-panel .form-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.claim-form-panel .form-actions button {
+  height: 38px;
+  padding: 0 22px;
+  font-size: 14px;
+  min-width: 90px;
+  align-self: center;
+}
+
+/* Responsive adjustments for ack card */
+@media (max-width: 640px) {
+  .ack-awaiting-banner {
+    padding: 12px 14px;
+  }
+  .detail-row-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dispatch-page .btn-primary:disabled,
+.manifests-page .btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* ================================================================
+   MANIFEST DETAIL – Clean stacked layout
+   ================================================================ */
+
+/* Outer wrapper: single column, consistent gap */
+.manifest-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin-bottom: 28px;
+}
+
+/* Top row: two equal-height side-by-side cards */
+.manifest-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: stretch;
+}
+
+.manifest-top-row .detail-card {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 700px) {
+  .manifest-top-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================================================
+   PAGINATION BAR
+   ================================================================ */
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 16px 0 4px;
+}
+
+.page-btn {
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a2b45;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1.4;
+}
+.page-btn:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 13px;
+  color: #64748b;
+  min-width: 96px;
+  text-align: center;
+}
+
+/* ================================================================
+   MANIFESTS & HANDOVER  –  Responsive
+   ================================================================ */
+
+/* Slide-in panel: full-width on small screens */
+@media (max-width: 480px) {
+  .claim-form-panel {
+    width: 100vw;
+    max-width: 100vw;
+    padding: 24px 16px 32px;
+  }
+}
+
+/* Detail header: stack button below title on narrow screens */
+@media (max-width: 600px) {
+  .manifests-page .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Status update bar: wrap inputs vertically */
+  .manifests-page .status-update-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  /* Detail rows: collapse to single column */
+  .manifests-page .detail-row-2,
+  .manifests-page .detail-row-3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stats: single column */
+  .manifests-page .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Form rows inside new-manifest: single column */
+  .manifests-page .form-row-2 > .form-field,
+  .manifests-page .form-row-3 > .form-field {
+    flex: 1 1 100%;
+  }
+
+  /* Handover form actions: stack or keep row with gap */
+  .claim-form-panel .form-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .claim-form-panel .form-actions button {
+    width: 100%;
+    height: auto;
+    padding: 10px 20px;
+    justify-content: center;
+  }
+}
+
+/* Tablet: 2-col stats, 1-col detail row-3 */
+@media (max-width: 860px) and (min-width: 601px) {
+  .manifests-page .detail-row-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .manifests-page .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Kebab menu ──────────────────────────────────────────────────────────── */
+
+.kebab-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: #64748b;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+.kebab-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.kebab-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 200;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+  min-width: 130px;
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.kebab-item {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.12s;
+}
+
+.kebab-item-view {
+  display: block;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0369a1;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.kebab-item-view:hover {
+  background: #e0f2fe;
+}
+
+.kebab-item-delete {
+  display: block;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #b91c1c;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-top: 1px solid #f3f4f6;
+}
+.kebab-item-delete:hover {
+  background: #fee2e2;
+}

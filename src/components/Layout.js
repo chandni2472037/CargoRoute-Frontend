@@ -23,9 +23,10 @@ const NAV_ITEMS = [
     icon: '📤',
     path: '/dispatch',
     children: [
-      { label: 'All Dispatches', path: '/dispatch' },
-      { label: 'New Dispatch',   path: '/dispatch/new' },
-      { label: 'Drivers',        path: '/drivers' },
+      { label: 'All Dispatches',         path: '/dispatch' },
+      { label: 'New Dispatch',            path: '/dispatch/new' },
+      { label: 'Drivers',                 path: '/drivers' },
+      { label: 'Driver Acknowledgements', path: '/driver-ack' },
     ],
   },
   { label: 'Manifests & POD', icon: '📄', path: '/manifests',
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
       { label: 'All Manifests',    path: '/manifests' },
       { label: 'New Manifest',     path: '/manifests/new' },
       { label: 'Proof of Delivery', path: '/pod' },
+      { label: 'Handovers',        path: '/handovers' },
     ],
   },
   {

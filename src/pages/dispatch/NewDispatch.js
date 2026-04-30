@@ -4,6 +4,7 @@ import Layout from '../../components/Layout';
 import { createDispatch, getAllDrivers } from '../../api/dispatchApi';
 import { DISPATCH_STATUS_CONFIG } from '../../utils/constants';
 import '../../styles/Bookings.css';
+import '../../styles/DispatchManifests.css';
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
@@ -35,8 +36,10 @@ export default function NewDispatch() {
 
   const [fields, setFields]     = useState(EMPTY_FORM);
   const [errors, setErrors]     = useState({});
+  const [validationWarning, setValidationWarning] = useState({});
   const [saving, setSaving]     = useState(false);
   const [apiError, setApiError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [drivers, setDrivers]   = useState([]);
 
   useEffect(() => {
@@ -45,13 +48,28 @@ export default function NewDispatch() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFields((prev) => ({ ...prev, [name]: value }));
+    let sanitized = value;
+    let warning = undefined;
+
+    if (name === 'loadID') {
+      sanitized = value.replace(/[^0-9]/g, '');
+    } else if (name === 'assignedBy') {
+      const originalLength = value.length;
+      sanitized = value.replace(/[^a-zA-Z0-9 ]/g, '');
+      if (originalLength > sanitized.length) {
+        warning = 'Special characters are not allowed. Only letters, numbers and spaces are accepted.';
+      }
+    }
+
+    setFields((prev) => ({ ...prev, [name]: sanitized }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setValidationWarning((prev) => ({ ...prev, [name]: warning }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setApiError('');
+    setSuccessMessage('');
     const validationErrors = validateDispatchForm(fields);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -67,7 +85,10 @@ export default function NewDispatch() {
 
     setSaving(true);
     createDispatch(payload)
-      .then((created) => navigate(`/dispatch/${created.dispatchID}`))
+      .then(() => {
+        setSuccessMessage('Dispatch created successfully! Redirecting…');
+        setTimeout(() => navigate('/dispatch'), 1500);
+      })
       .catch((err) => {
         const msg = err?.response?.data?.message || err?.response?.data || 'Failed to create dispatch.';
         setApiError(String(msg));
@@ -77,17 +98,19 @@ export default function NewDispatch() {
 
   return (
     <Layout>
-      <div className="bookings-page">
+      <div className="bookings-page dispatch-page">
 
         {/* ── Header ── */}
         <div className="page-header">
-          <div>
-            <h1 className="page-title">New Dispatch</h1>
-            <p className="page-subtitle">Assign a load to a driver for dispatch</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="back-btn" onClick={() => navigate('/dispatch')} title="Back">
+              ←
+            </button>
+            <div>
+              <h1 className="page-title">New Dispatch</h1>
+              <p className="page-subtitle">Assign a load to a driver for dispatch</p>
+            </div>
           </div>
-          <button className="btn-secondary" onClick={() => navigate('/dispatch')}>
-            ← Back to Dispatches
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
@@ -100,16 +123,15 @@ export default function NewDispatch() {
               <div className="form-field">
                 <label>Load ID <span className="required">*</span></label>
                 <input
-                  type="number"
+                  type="text"
                   name="loadID"
                   placeholder="e.g. 5"
                   value={fields.loadID}
                   onChange={handleChange}
                   className={errors.loadID ? 'input-error' : ''}
-                  min="1"
                 />
                 {errors.loadID && <span className="error-msg">{errors.loadID}</span>}
-                <span className="field-hint">Numeric ID of the load to dispatch</span>
+                <span className="field-hint">Must be a numeric ID</span>
               </div>
 
               <div className="form-field">
@@ -145,6 +167,7 @@ export default function NewDispatch() {
                   className={errors.assignedBy ? 'input-error' : ''}
                 />
                 {errors.assignedBy && <span className="error-msg">{errors.assignedBy}</span>}
+                {validationWarning.assignedBy && <span className="error-msg" style={{ color: '#f59e0b' }}>⚠ {validationWarning.assignedBy}</span>}
               </div>
 
               <div className="form-field">
@@ -158,7 +181,12 @@ export default function NewDispatch() {
             </div>
           </div>
 
-          {/* ── API Error ── */}
+          {/* ── API Error/Success ── */}
+          {successMessage && (
+            <div className="auth-message auth-message-success" style={{ marginBottom: 14 }}>
+              ✔ {successMessage}
+            </div>
+          )}
           {apiError && (
             <div className="auth-message auth-message-error" style={{ marginBottom: 14 }}>
               ⚠ {apiError}
@@ -166,17 +194,9 @@ export default function NewDispatch() {
           )}
 
           {/* ── Actions ── */}
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => navigate('/dispatch')}
-              disabled={saving}
-            >
-              Cancel
-            </button>
+          <div className="form-actions" style={{ display: 'flex', gap: 16, justifyContent: 'flex-end', marginTop: 8 }}>
             <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Creating…' : '📤 Create Dispatch'}
+              {saving ? 'Creating…' : 'Create'}
             </button>
           </div>
         </form>

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { getAllManifests, deleteManifest } from '../../api/manifestApi';
 import '../../styles/Bookings.css';
+import '../../styles/DispatchManifests.css';
 
 function formatManifestId(id) {
   return `MF${String(id).padStart(4, '0')}`;
@@ -18,13 +19,25 @@ function formatDateTime(dt) {
   });
 }
 
+const PAGE_SIZE = 4;
+
 export default function ManifestList() {
   const navigate = useNavigate();
   const [manifests, setManifests] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
   const [search, setSearch]       = useState('');
-  const [deletingId, setDeletingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpenMenuId(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const loadManifests = useCallback(() => {
     setLoading(true);
@@ -50,6 +63,12 @@ export default function ManifestList() {
     );
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setCurrentPage(1); }, [search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   const stats = {
     total:   manifests.length,
     today:   manifests.filter((m) => {
@@ -61,14 +80,15 @@ export default function ManifestList() {
   };
 
   const handleDelete = (id) => {
+    if (!window.confirm('Delete this manifest? This cannot be undone.')) return;
     deleteManifest(id)
-      .then(() => { setDeletingId(null); loadManifests(); })
-      .catch(() => setDeletingId(null));
+      .then(() => { setOpenMenuId(null); loadManifests(); })
+      .catch(() => setOpenMenuId(null));
   };
 
   return (
     <Layout>
-      <div className="bookings-page">
+      <div className="bookings-page manifests-page">
 
         {/* ── Header ── */}
         <div className="page-header">
@@ -76,8 +96,8 @@ export default function ManifestList() {
             <h1 className="page-title">Manifests</h1>
             <p className="page-subtitle">Manage shipment manifests and load documentation</p>
           </div>
-          <button className="btn-primary" onClick={() => navigate('/manifests/new')}>
-            + New Manifest
+          <button className="btn-primary expand-btn" title="New Manifest" onClick={() => navigate('/manifests/new')}>
+            <span className="expand-btn-icon">+</span><span className="expand-btn-label">New Manifest</span>
           </button>
         </div>
 
@@ -138,7 +158,7 @@ export default function ManifestList() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.length === 0 ? (
+                  {paginated.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="empty-state">
                         {manifests.length === 0
@@ -147,8 +167,9 @@ export default function ManifestList() {
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((m) => {
+                    paginated.map((m) => {
                       const mf = m.manifest || {};
+                      const isOpen = openMenuId === mf.manifestID;
                       return (
                         <tr
                           key={mf.manifestID}
@@ -160,18 +181,19 @@ export default function ManifestList() {
                           <td className="booking-id-cell">{formatLoadId(mf.loadID)}</td>
                           <td>{mf.createdBy || '–'}</td>
                           <td>{formatDateTime(mf.createdAt)}</td>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button className="btn-view" onClick={() => navigate(`/manifests/${mf.manifestID}`)}>View</button>
-                              {deletingId === mf.manifestID ? (
-                                <>
-                                  <button className="btn-view" style={{ background: '#fee2e2', color: '#b91c1c' }} onClick={() => handleDelete(mf.manifestID)}>Confirm</button>
-                                  <button className="btn-view" onClick={() => setDeletingId(null)}>Cancel</button>
-                                </>
-                              ) : (
-                                <button className="btn-view" style={{ background: '#fee2e2', color: '#b91c1c' }} onClick={() => setDeletingId(mf.manifestID)}>Delete</button>
-                              )}
-                            </div>
+                          <td className="actions-cell" onClick={(e) => e.stopPropagation()} ref={isOpen ? menuRef : null}>
+                            <button
+                              className="actions-menu-btn"
+                              onClick={(e) => { e.stopPropagation(); setOpenMenuId(isOpen ? null : mf.manifestID); }}
+                              title="Actions"
+                            >…</button>
+                            {isOpen && (
+                              <div className="actions-dropdown">
+                                <button className="actions-dropdown-item" onClick={() => { setOpenMenuId(null); navigate(`/manifests/${mf.manifestID}`); }}>👁 View</button>
+                                <button className="actions-dropdown-item" onClick={() => { setOpenMenuId(null); navigate(`/manifests/${mf.manifestID}`, { state: { edit: true } }); }}>✏️ Edit</button>
+                                <button className="actions-dropdown-item actions-dropdown-danger" onClick={(e) => { e.stopPropagation(); handleDelete(mf.manifestID); }}>🗑 Delete</button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -179,6 +201,15 @@ export default function ManifestList() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* ── Pagination ── */}
+          {totalPages > 1 && (
+            <div className="pagination-bar">
+              <button className="page-btn" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>‹ Prev</button>
+              <span className="page-info">Page {currentPage} of {totalPages}</span>
+              <button className="page-btn" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next ›</button>
             </div>
           )}
         </div>

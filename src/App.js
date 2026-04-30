@@ -22,6 +22,7 @@ import DispatchList   from "./pages/dispatch/DispatchList";
 import NewDispatch    from "./pages/dispatch/NewDispatch";
 import DispatchDetail from "./pages/dispatch/DispatchDetail";
 import DriversList    from "./pages/dispatch/DriversList";
+import DriverAckList  from "./pages/dispatch/DriverAckList";
 
 // Manifests & POD module
 import ManifestList   from "./pages/manifests/ManifestList";
@@ -29,6 +30,7 @@ import NewManifest    from "./pages/manifests/NewManifest";
 import ManifestDetail from "./pages/manifests/ManifestDetail";
 import PodList        from "./pages/manifests/PodList";
 import PodDetail      from "./pages/manifests/PodDetail";
+import HandoverList   from "./pages/manifests/HandoverList";
 
 import AuthProvider    from "./auth/AuthContext";
 import ProtectedRoute  from "./auth/ProtectedRoute";
@@ -169,6 +171,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/driver-ack"
+            element={
+              <ProtectedRoute roles={[...DISPATCH_ROLES, 'Driver']}>
+                <DriverAckList />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ── Manifests & POD ── */}
           <Route
@@ -208,6 +218,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={MANIFEST_ROLES}>
                 <PodDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/handovers"
+            element={
+              <ProtectedRoute roles={MANIFEST_ROLES}>
+                <HandoverList />
               </ProtectedRoute>
             }
           />
