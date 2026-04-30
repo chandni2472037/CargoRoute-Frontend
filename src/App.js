@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Login          from "./pages/Login";
 import Signup         from "./pages/Signup";
+// import AdminDashboard from "./pages/AdminDashboard";
 import Unauthorized   from "./pages/Unauthorized";
 
 // Booking & Order Intake module
@@ -13,6 +14,21 @@ import NewShipper     from "./pages/bookings/NewShipper";
 import ShipperDetail  from "./pages/bookings/ShipperDetail";
 import ShipperEdit    from "./pages/bookings/ShipperEdit";
 
+// Fleet Management module
+import FleetRegistry from "./pages/fleet/FleetRegistry";
+import VehicleForm   from "./pages/fleet/VehicleForm";
+import VehicleDetail from "./pages/fleet/VehicleDetail";
+
+// Route Optimization module
+import RouteOptimization from "./pages/routing/RouteOptimization";
+import LoadPlanning      from "./pages/routing/LoadPlanning";
+import RouteDetail       from "./pages/routing/RouteDetail";
+import RouteForm         from "./pages/routing/RouteForm";
+import LoadDetail        from "./pages/routing/LoadDetail";
+import LoadForm          from "./pages/routing/LoadForm";
+import RoutingRules      from "./pages/routing/RoutingRules";
+import RoutingRuleDetail from "./pages/routing/RoutingRuleDetail";
+import RoutingRuleForm   from "./pages/routing/RoutingRuleForm";
 // Exceptions & Claims module
 import ExceptionsList  from "./pages/exceptions/ExceptionsList";
 import NewException    from "./pages/exceptions/NewException";
@@ -52,35 +68,57 @@ const CLAIM_CREATE_ROLES = ["Admin", "Shipper"];
 
 
 
+// Roles allowed to access the bookings module
+const BOOKING_ROLES = ["Admin", "Dispatcher", "Shipper", "Analyst"];
+
+// Roles allowed to access the fleet module
+const FLEET_ROLES = ["Admin", "Dispatcher", "FleetManager"];
+
+// Roles allowed to access the routing module
+const ROUTING_ROLES = ["Admin", "Dispatcher"];
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-
-          {/* Public */}
-          <Route path="/login"        element={<Login />} />
-          <Route path="/signup"       element={<Signup />} />
+          {/* ── Public Routes ── */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* Dashboard */}
-          <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
-
-          {/* Default redirect */}
+          {/* ── Dashboard ── */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}/>
-
 
           {/* ── Booking & Order Intake ── */}
           <Route path="/bookings" element={<ProtectedRoute roles={BOOKING_ROLES_VIEW}><BookingsList /></ProtectedRoute>} />
           <Route path="/bookings/new" element={<ProtectedRoute roles={BOOKING_ROLES_CREATE}><NewBooking /></ProtectedRoute>} />
           <Route path="/bookings/:id" element={<ProtectedRoute roles={BOOKING_ROLES_VIEW}><BookingDetail /></ProtectedRoute>} />
+          
           <Route path="/shippers" element={<ProtectedRoute roles={BOOKING_ROLES_VIEW}><ShippersList /></ProtectedRoute>} />
           <Route path="/shippers/new" element={<ProtectedRoute roles={["Admin"]}><NewShipper /></ProtectedRoute>} />
           <Route path="/shippers/:id/edit" element={<ProtectedRoute roles={["Admin"]}><ShipperEdit /></ProtectedRoute>} />
           <Route path="/shippers/:id" element={<ProtectedRoute roles={BOOKING_ROLES_VIEW}><ShipperDetail /></ProtectedRoute>} />
+
+          {/* ── Fleet Management ── */}
+          <Route path="/fleet/vehicles" element={<ProtectedRoute roles={FLEET_ROLES}><FleetRegistry /></ProtectedRoute>} />
+          <Route path="/fleet/vehicles/new" element={<ProtectedRoute roles={FLEET_ROLES}><VehicleForm isEdit={false} /></ProtectedRoute>} />
+          <Route path="/fleet/vehicles/:id" element={<ProtectedRoute roles={FLEET_ROLES}><VehicleDetail /></ProtectedRoute>} />
+          <Route path="/fleet/vehicles/:id/edit" element={<ProtectedRoute roles={FLEET_ROLES}><VehicleForm isEdit={true} /></ProtectedRoute>} />
+
+          {/* ── Route Optimization ── */}
+          <Route path="/routing/routes" element={<ProtectedRoute roles={ROUTING_ROLES}><RouteOptimization /></ProtectedRoute>} />
+          <Route path="/routing/routes/new" element={<ProtectedRoute roles={ROUTING_ROLES}><RouteForm isEdit={false} /></ProtectedRoute>} />
+          <Route path="/routing/route/:id" element={<ProtectedRoute roles={ROUTING_ROLES}><RouteDetail /></ProtectedRoute>} />
+          <Route path="/routing/route/:id/edit" element={<ProtectedRoute roles={ROUTING_ROLES}><RouteForm isEdit={true} /></ProtectedRoute>} />
+          <Route path="/routing/load-planning" element={<ProtectedRoute roles={ROUTING_ROLES}><LoadPlanning /></ProtectedRoute>} />
+          <Route path="/routing/load/new" element={<ProtectedRoute roles={ROUTING_ROLES}><LoadForm /></ProtectedRoute>} />
+          <Route path="/routing/load/:id" element={<ProtectedRoute roles={ROUTING_ROLES}><LoadDetail /></ProtectedRoute>} />
+
+          <Route path="/routing/rules" element={<ProtectedRoute roles={ROUTING_ROLES}><RoutingRules /></ProtectedRoute>} />
+          <Route path="/routing/rules/new" element={<ProtectedRoute roles={ROUTING_ROLES}><RoutingRuleForm /></ProtectedRoute>} />
+          <Route path="/routing/rules/:id" element={<ProtectedRoute roles={ROUTING_ROLES}><RoutingRuleDetail /></ProtectedRoute>} />
 
           {/* ── Exceptions & Claims ── */}
           <Route path="/exceptions" element={<ProtectedRoute roles={EXCEPTION_VIEW_ROLES}><ExceptionsList /></ProtectedRoute>} />
@@ -90,53 +128,18 @@ export default function App() {
           <Route path="/claims/new" element={<ProtectedRoute roles={CLAIM_CREATE_ROLES}><NewClaim /></ProtectedRoute>} />
           <Route path="/claims/:id" element={<ProtectedRoute roles={EXCEPTION_VIEW_ROLES}><ClaimDetail /></ProtectedRoute>} />
 
-          {/* Profile – all users */}
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>}/>
-
-          {/* User Management – ADMIN only */}
-          <Route path="/admin/users" element={<ProtectedRoute role="Admin"><UsersPage /></ProtectedRoute>}/>
-          <Route path="/admin/audit-logs" element={<ProtectedRoute role="Admin"><AuditLogsPage /></ProtectedRoute>}/>
-  
-
-
+          {/* ── Management & Profile ── */}
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           
-<Route
-  path="/notifications"
-  element={
-    <ProtectedRoute>
-      <Notifications />
-    </ProtectedRoute>
-  }
-/>
+          <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
+          <Route path="/tasks/new" element={<ProtectedRoute><NewTaskPage /></ProtectedRoute>} />
+          <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetailPage /></ProtectedRoute>} />
 
-<Route
-  path="/tasks"
-  element={
-    <ProtectedRoute>
-      <TasksPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/tasks/new"
-  element={
-    <ProtectedRoute>
-      <NewTaskPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/tasks/:id"
-  element={
-    <ProtectedRoute>
-      <TaskDetailPage />
-    </ProtectedRoute>
-  }
-/>
-
-
+          {/* ── Admin Only ── */}
+          <Route path="/admin/users" element={<ProtectedRoute role="Admin"><UsersPage /></ProtectedRoute>} />
+          <Route path="/admin/audit-logs" element={<ProtectedRoute role="Admin"><AuditLogsPage /></ProtectedRoute>} />
+          
         </Routes>
       </BrowserRouter>
     </AuthProvider>

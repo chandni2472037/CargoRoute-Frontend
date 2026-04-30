@@ -8,7 +8,7 @@ import { signoutUser } from '../api/authApi';
 import '../styles/Layout.css';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',       icon: '⊞',  path: '/dashboard' },
+  { label: 'Dashboard', icon: '⊞', path: '/dashboard' },
   {
     label: 'Bookings',
     icon: '📦',
@@ -27,16 +27,25 @@ const NAV_ITEMS = [
         { label: 'Add Shipper',  path: '/shippers/new' },
       ],
     },
-  { label: 'Vehicles & Fleet', icon: '🚚', path: '/vehicles' },
-  { label: 'Route Planning',   icon: '🗺️', path: '/routes' },
+ 
   {
-    label: 'Dispatch',
-    icon: '📤',
-    path: '/dispatch',
+    label: 'Fleet Management',
+    icon: '🚚',
+    path: '/fleet/vehicles',
     children: [
-      { label: 'All Dispatches', path: '/dispatch' },
-      { label: 'New Dispatch',   path: '/dispatch/new' },
-      { label: 'Drivers',        path: '/drivers' },
+      { label: 'Fleet Registry', path: '/fleet/vehicles' },
+      { label: 'Add Vehicle',    path: '/fleet/vehicles/new' },
+    ],
+  },
+
+  {
+    label: 'Route Optimization',
+    icon: '🗺️',
+    path: '/routing/routes',
+    children: [
+      { label: 'Route Optimization', path: '/routing/routes' },
+      { label: 'Load Planning', path: '/routing/load-planning' },
+      { label: 'Routing Rules', path: '/routing/rules' },
     ],
   },
   {
@@ -44,8 +53,8 @@ const NAV_ITEMS = [
     icon: '📄',
     path: '/manifests',
     children: [
-      { label: 'All Manifests',     path: '/manifests' },
-      { label: 'New Manifest',      path: '/manifests/new' },
+      { label: 'All Manifests', path: '/manifests' },
+      { label: 'New Manifest', path: '/manifests/new' },
       { label: 'Proof of Delivery', path: '/pod' },
     ],
   },
@@ -54,18 +63,18 @@ const NAV_ITEMS = [
     icon: '⚠️',
     path: '/exceptions',
     children: [
-      { label: 'All Exceptions',   path: '/exceptions' },
+      { label: 'All Exceptions', path: '/exceptions' },
       { label: 'Report Exception', path: '/exceptions/new' },
-      { label: 'Claims',           path: '/claims' },
-      { label: 'File Claim',       path: '/claims/new' },
+      { label: 'Claims', path: '/claims' },
+      { label: 'File Claim', path: '/claims/new' },
     ],
   },
-
+  { label: 'Dispatch', icon: '📤', path: '/dispatch' },
+  { label: 'Driver Portal', icon: '👤', path: '/drivers' },
   { label: 'User Management', icon: '👥', path: '/admin/users', adminOnly: true },
   { label: 'Audit Logs', icon: '🧾', path: '/admin/audit-logs', adminOnly: true },
-
 ];
-
+  
 const DRIVER_ROLE = 'DRIVER';
 
 const getUserId = (u) => {

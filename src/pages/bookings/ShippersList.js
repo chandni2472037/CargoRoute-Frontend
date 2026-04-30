@@ -34,7 +34,7 @@ export default function ShippersList() {
     setLoading(true);
     getAllShippers()
       .then(setShippers)
-      .catch(() => setError('Could not load shippers. Is the API Gateway running on port 8084?'))
+      .catch(() => setError('Could not load shippers. Is the API Gateway running on port 8089?'))
       .finally(() => setLoading(false));
   };
 
@@ -55,21 +55,21 @@ export default function ShippersList() {
     setMessage({ type: '', text: '' });
     setShowForm(true);
   };
-
-  const openEditForm = (s, mode = 'edit') => {
-    setEditId(s.shipperID);
-    setForm({
-      name:         s.name         || '',
-      contactInfo:  s.contactInfo  || '',
-      accountTerms: s.accountTerms || '',
-      status:       s.status       || 'ACTIVE',
-    });
-    setFormErrors({});
-    setMessage({ type: '', text: '' });
-    setViewMode(mode === 'view');
-    setShowForm(true);
-    setOpenMenuId(null);
-  };
+/*  commented due to error*/ 
+  // const openEditForm = (s, mode = 'edit') => {
+  //   setEditId(s.shipperID);
+  //   setForm({
+  //     name:         s.name         || '',
+  //     contactInfo:  s.contactInfo  || '',
+  //     accountTerms: s.accountTerms || '',
+  //     status:       s.status       || 'ACTIVE',
+  //   });
+  //   setFormErrors({});
+  //   setMessage({ type: '', text: '' });
+  //   setViewMode(mode === 'view');
+  //   setShowForm(true);
+  //   setOpenMenuId(null);
+  // };
 
   const handleView = (shipper) => {
     // Navigate to dedicated detail page instead of inline modal

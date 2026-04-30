@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { signupUser } from "../api/authApi";
 import { useNavigate } from "react-router-dom";
-import { USER_ROLES } from "../utils/constants";
+import { USER_ROLES } from "../utils/constants"; // Ensure this import exists
 import "../styles/Auth.css";
 
 // All roles are available at public signup.
-const SIGNUP_ROLES = USER_ROLES;
+const SIGNUP_ROLES = USER_ROLES || [
+  "Dispatcher", "Shipper", "Driver", "WarehouseManager", 
+  "BillingClerk", "FleetManager", "Analyst", "Admin"
+];
 
 export default function Signup() {
-
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -53,18 +55,22 @@ export default function Signup() {
           <input
             placeholder="Full Name"
             required
+            value={form.name}
             onChange={e => setForm({ ...form, name: e.target.value })}
           />
 
           <input
             placeholder="Email Address"
+            type="email"
             required
+            value={form.email}
             onChange={e => setForm({ ...form, email: e.target.value })}
           />
 
           <input
             placeholder="Phone Number"
             required
+            value={form.phone}
             onChange={e => setForm({ ...form, phone: e.target.value })}
           />
 
@@ -72,13 +78,18 @@ export default function Signup() {
             onChange={e => setForm({ ...form, role: e.target.value })}
             value={form.role}
           >
-            {SIGNUP_ROLES.map((r) => <option key={r}>{r}</option>)}
+            {SIGNUP_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
           </select>
 
           <input
             type="password"
             placeholder="Create Password"
             required
+            value={form.password}
             onChange={e => setForm({ ...form, password: e.target.value })}
           />
 

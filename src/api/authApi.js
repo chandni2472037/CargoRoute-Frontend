@@ -1,8 +1,8 @@
 import axios from "axios";
 
 
-const AUTH_URL = "http://localhost:8080/cargoRoute/auth";
-const USER_URL = "http://localhost:8080/user";
+const AUTH_URL = "http://localhost:8089/cargoRoute/auth";
+const USER_URL = "http://localhost:8089/user";
 
 const authHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,

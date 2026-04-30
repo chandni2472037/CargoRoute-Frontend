@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/cargoRoute/notifications";
+const API_URL = "http://localhost:8089/cargoRoute/notifications";
 
 const authHeader = () => {
   const token = localStorage.getItem("token");

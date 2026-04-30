@@ -50,7 +50,7 @@ export default function UsersPage() {
     if (!validateNewUser()) return;
     setError("");
     try {
-      await axios.post("http://localhost:8080/cargoRoute/auth/signup", newUser, {
+      await axios.post("http://localhost:8089/cargoRoute/auth/signup", newUser, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
 
@@ -72,7 +72,7 @@ export default function UsersPage() {
   };
 
   const loadUsers = async () => {
-    const res = await axios.get("http://localhost:8080/cargoRoute/user/getAllUsers", {
+    const res = await axios.get("http://localhost:8089/cargoRoute/user/getAllUsers", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
     });
       setUsers(res.data);
@@ -83,7 +83,7 @@ export default function UsersPage() {
 
   const handleSave = async () => {
     await axios.put(
-      `http://localhost:8080/cargoRoute/user/${selectedUser.userID}`,
+      `http://localhost:8089/cargoRoute/user/${selectedUser.userID}`,
       { role: selectedUser.role, status: selectedUser.status },
       { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
     );
