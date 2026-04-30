@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Layout from "../../components/Layout";
 import axios from "axios";
+import { ROLES } from "../../constants/roles";
 import "../../styles/Users.css";
 
 export default function UsersPage() {
@@ -18,6 +19,7 @@ export default function UsersPage() {
     phone: "",
     role: "Dispatcher",
     password: "",
+    confirmPassword: "",
     status: "ACTIVE"
   });
   const [formErrors, setFormErrors] = useState({});
@@ -38,6 +40,8 @@ export default function UsersPage() {
     if (!/[A-Z]/.test(newUser.password) || !/[a-z]/.test(newUser.password) || !/[0-9]/.test(newUser.password) || !/[^A-Za-z0-9]/.test(newUser.password)) {
       e.password = "Use upper, lower, number and special character";
     }
+    if (!newUser.confirmPassword) e.confirmPassword = "Confirm password is required";
+    if (newUser.password !== newUser.confirmPassword) e.confirmPassword = "Passwords do not match";
     setFormErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -57,6 +61,7 @@ export default function UsersPage() {
         phone: "",
         role: "Dispatcher",
         password: "",
+        confirmPassword: "",
         status: "ACTIVE"
       });
       setFormErrors({});
@@ -86,11 +91,6 @@ export default function UsersPage() {
     setSelectedUser(null);
     loadUsers();
   };
-
-  const roleOptions = useMemo(
-    () => Array.from(new Set(users.map((u) => u.role).filter(Boolean))).sort(),
-    [users]
-  );
 
   const filteredUsers = useMemo(() => {
     const q = search.toLowerCase();
@@ -122,12 +122,12 @@ export default function UsersPage() {
     />
 
     <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-      <option value="ALL">Roles</option>
-      {roleOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+      <option value="ALL">All Roles</option>
+      {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
     </select>
 
     <button className="primary btn-create-user" title="Create User" onClick={() => setShowCreate(true)}>
-      ＋
+      +
     </button>
   </div>
 </div>
@@ -141,6 +141,7 @@ export default function UsersPage() {
             <th>User</th>
             <th>Email</th>
             <th>Role</th>
+            <th>Status</th>
             <th>Phone</th>
             <th>Actions</th>
           </tr>
@@ -154,6 +155,11 @@ export default function UsersPage() {
               <td>
                 <span className={`role-badge role-${u.role}`}>
                   {u.role}
+                </span>
+              </td>
+              <td>
+                <span className={`status-badge status-${String(u.status || "").toLowerCase()}`}>
+                  {u.status || "N/A"}
                 </span>
               </td>
               <td>{u.phone}</td>
@@ -177,9 +183,11 @@ export default function UsersPage() {
         {/* ✅ EDIT USER MODAL — PUT IT HERE */}
         {selectedUser && (
         <div className="modal-backdrop">
-          <div className="modal-card modal-card-wide">
-
-            <h3>Edit User</h3>
+          <div className="modal-card modal-card-edit">
+            <div className="modal-header">
+              <h3>Edit User</h3>
+              <button className="modal-close" onClick={() => setSelectedUser(null)}>✕</button>
+            </div>
 
             <label>Email</label>
             <input value={selectedUser.email} disabled />
@@ -191,10 +199,11 @@ export default function UsersPage() {
                 setSelectedUser({ ...selectedUser, role: e.target.value })
               }
             >
-              <option>Admin</option>
-              <option>Dispatcher</option>
-              <option>Driver</option>
-              <option>Analyst</option>
+              {ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
             </select>
 
             <label>Status</label>
@@ -204,14 +213,12 @@ export default function UsersPage() {
                 setSelectedUser({ ...selectedUser, status: e.target.value })
               }
             >
-              <option>ACTIVE</option>
-              <option>INACTIVE</option>
+              <option>Active</option>
+              <option>Inactive</option>
             </select>
 
             <div className="modal-actions">
-              <button onClick={() => setSelectedUser(null)}>
-                Cancel
-              </button>
+              
               <button className="primary" onClick={handleSave}>
                 Save
               </button>
@@ -226,9 +233,11 @@ export default function UsersPage() {
 
       {showCreate && (
   <div className="modal-backdrop">
-    <div className="modal-card">
-
-      <h3>Create New User</h3>
+    <div className="modal-card modal-card-create">
+      <div className="modal-header">
+        <h3>Create New User</h3>
+        <button className="modal-close" onClick={() => setShowCreate(false)}>✕</button>
+      </div>
 
       <div className="form-grid-2">
         <div className="form-field">
@@ -252,26 +261,33 @@ export default function UsersPage() {
         <div className="form-field">
           <label>Role</label>
           <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
-            <option>Dispatcher</option>
-            <option>Driver</option>
-            <option>FleetManager</option>
-            <option>WarehouseManager</option>
-            <option>BillingClerk</option>
-            <option>Analyst</option>
-            <option>Admin</option>
+            {ROLES.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
           </select>
           <small className="field-error"> </small>
         </div>
 
-        <div className="form-field tasks-form-field-full">
+        <div className="form-field">
           <label>Password</label>
           <input type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
           <small className="field-error">{formErrors.password || " "}</small>
         </div>
+
+        <div className="form-field">
+          <label>Confirm Password</label>
+          <input type="password" value={newUser.confirmPassword} onChange={e => setNewUser({ ...newUser, confirmPassword: e.target.value })} />
+          <small className="field-error">{formErrors.confirmPassword || " "}</small>
+        </div>
       </div>
 
       <div className="modal-actions">
-        <button onClick={() => setShowCreate(false)}>Cancel</button>
+        <button onClick={() => {
+          setNewUser({ name: "", email: "", phone: "", role: "Dispatcher", password: "", confirmPassword: "", status: "ACTIVE" });
+          setFormErrors({});
+        }}>Reset</button>
         <button className="primary" onClick={handleCreate}>
           Create
         </button>

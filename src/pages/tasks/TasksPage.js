@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
-import { getAllTasks } from "../../api/taskApi";
+import { getAllTasks, getEntityName } from "../../api/taskApi";
 import { getUserFromToken } from "../../utils/jwtUtils";
 import "../../styles/Tasks.css";
 
@@ -45,7 +45,7 @@ const getRelatedLabel = (task) => {
   const desc = String(task?.description || "");
   const match = desc.match(/(BK\d+|LD[-\dA-Z]+|EXC\d+)/i);
   if (match?.[1]) return match[1].toUpperCase();
-  return task?.relatedEntityID ?? "-";
+  return getEntityName(task?.relatedEntityID) || "-";
 };
 
 const statusText = (status) => {
@@ -117,14 +117,6 @@ export default function TasksPage() {
     };
   }, [visibleTasks]);
 
-  const activeTasks = useMemo(
-    () => filteredTasks.filter((t) => {
-      const s = normalizeStatus(t.status);
-      return s === "PENDING" || s === "INPROGRESS";
-    }),
-    [filteredTasks]
-  );
-
   return (
     <Layout>
       <div className="tasks-page">
@@ -136,7 +128,13 @@ export default function TasksPage() {
             </p>
           </div>
           <div className="tasks-header-actions">
-            <button className="tasks-btn tasks-btn-primary" onClick={() => navigate('/tasks/new')}>Add Task</button>
+            <button
+              className="tasks-btn tasks-btn-primary btn-create-task"
+              title="Create Task"
+              onClick={() => navigate('/tasks/new')}
+            >
+              +
+            </button>
             <button className="tasks-btn" onClick={loadTasks}>↻ Refresh</button>
           </div>
         </div>
@@ -184,7 +182,7 @@ export default function TasksPage() {
 
         <div className="tasks-card">
           <div className="tasks-section-head">
-            <h3>Active Tasks</h3>
+            <h3>All Tasks</h3>
             <span className="tasks-scope-pill">
               {isDriver ? "Driver scope: my tasks" : "Scope: all tasks"}
             </span>
@@ -192,11 +190,11 @@ export default function TasksPage() {
 
           {loading ? (
             <div className="tasks-empty">Loading tasks...</div>
-          ) : activeTasks.length === 0 ? (
+          ) : filteredTasks.length === 0 ? (
             <div className="tasks-empty">No tasks found.</div>
           ) : (
             <div className="tasks-list">
-              {activeTasks.map((t) => {
+              {filteredTasks.map((t) => {
                 const normalized = normalizeStatus(t.status);
                 const priority = priorityFromTask(t);
                 return (
@@ -210,7 +208,7 @@ export default function TasksPage() {
                     <p className="task-desc">{t.description || "-"}</p>
 
                     <div className="task-bottom">
-                      <span className="task-related">Related: {getRelatedLabel(t)}</span>
+                      <span className="task-related">Related to: {getRelatedLabel(t)}</span>
                       <button
                         className="task-view-btn"
                         onClick={() => t?.taskID && navigate(`/tasks/${t.taskID}`)}

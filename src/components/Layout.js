@@ -159,16 +159,13 @@ export default function Layout({ children }) {
   const isParentActive = (item) =>
     item.children && item.children.some((c) => location.pathname.startsWith(c.path));
 
-  const handleSignout = async () => {
-    try {
-      await signoutUser();
-    } catch {
-      // continue local signout
-    } finally {
-      setProfileMenuOpen(false);
-      logoutUser();
-      navigate('/login');
-    }
+  const handleSignout = () => {
+    // Always sign out locally immediately for reliable UX.
+    // Remote signout is best-effort and should not block navigation.
+    signoutUser().catch(() => {});
+    setProfileMenuOpen(false);
+    logoutUser();
+    navigate('/login', { replace: true });
   };
 
   return (

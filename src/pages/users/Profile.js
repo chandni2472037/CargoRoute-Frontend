@@ -2,26 +2,24 @@ import { useMemo, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserFromToken } from "../../utils/jwtUtils";
 import Layout from "../../components/Layout";
-import { signoutUser } from "../../api/authApi";
-import { AuthContext } from "../../auth/AuthContext";
 import "../../styles/Profile.css";
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { logoutUser } = useContext(AuthContext);
   const user = getUserFromToken() || {};
   const [copied, setCopied] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({
+    name: user?.name || "",
+    phone: user?.phone || "",
+  });
 
   const profile = useMemo(() => {
-    const issuedAt = user?.iat ? new Date(user.iat * 1000) : null;
-    const expiresAt = user?.exp ? new Date(user.exp * 1000) : null;
     return {
       name: user?.name || "-",
       email: user?.email || "-",
       role: user?.role || "-",
       phone: user?.phone || "-",
-      issuedAt,
-      expiresAt,
     };
   }, [user]);
 
@@ -36,14 +34,12 @@ export default function Profile() {
   };
 
   const exportProfile = () => {
-    const headers = ["Name", "Email", "Role", "Phone", "Token Issued At", "Token Expires At"];
+    const headers = ["Name", "Email", "Role", "Phone"];
     const row = [
       profile.name,
       profile.email,
       profile.role,
       profile.phone,
-      profile.issuedAt ? profile.issuedAt.toLocaleString() : "-",
-      profile.expiresAt ? profile.expiresAt.toLocaleString() : "-",
     ];
     const csv = [headers, row]
       .map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(","))
@@ -57,16 +53,8 @@ export default function Profile() {
     URL.revokeObjectURL(url);
   };
 
-  const handleSignout = async () => {
-    try {
-      await signoutUser();
-    } catch {
-      // local signout should still proceed
-    } finally {
-      logoutUser();
-      navigate("/login");
-    }
-  };
+
+  console.log(profile.phone);
 
   return (
     <Layout>
@@ -74,12 +62,9 @@ export default function Profile() {
         <div className="profile-header">
           <div>
             <h1 className="profile-title">My Profile</h1>
-            <p className="profile-subtitle">Manage your account details</p>
+            <p className="profile-subtitle">Manage your account details and quick actions</p>
           </div>
-          <div className="profile-top-actions">
-            <button className="profile-btn" onClick={exportProfile}>⬇ Export</button>
-            <button className="profile-btn profile-btn-danger" onClick={handleSignout}>Signout</button>
-          </div>
+          
         </div>
 
         <div className="profile-grid">
@@ -108,16 +93,10 @@ export default function Profile() {
                 <button className="profile-icon-btn" onClick={() => copyText(profile.phone, "phone")}>📋</button>
               </div>
             </div>
-            <div className="profile-row">
-              <span>Token Issued</span>
-              <strong>{profile.issuedAt ? profile.issuedAt.toLocaleString() : "-"}</strong>
-            </div>
-            <div className="profile-row">
-              <span>Token Expires</span>
-              <strong>{profile.expiresAt ? profile.expiresAt.toLocaleString() : "-"}</strong>
-            </div>
             {copied && <div className="profile-copied">Copied {copied} ✓</div>}
           </section>
+
+          
         </div>
       </div>
     </Layout>

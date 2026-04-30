@@ -55,6 +55,36 @@
   background: #1d4ed8;
 }
 
+.tasks-btn-back {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  padding: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.tasks-btn-back:hover {
+  opacity: 1;
+  background: #f0f0f0;
+}
+
+.btn-create-task {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  line-height: 1;
+  padding: 0;
+}
+
 .tasks-error {
   border: 1px solid #fecaca;
   background: #fef2f2;
@@ -400,6 +430,41 @@
   color: #334155;
   font-size: 14px;
   line-height: 1.5;
+}
+
+.tasks-inline-select {
+  min-width: 160px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.tasks-inline-input {
+  min-width: 160px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.tasks-inline-textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.tasks-inline-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #64748b;
 }
 
 @media (max-width: 760px) {

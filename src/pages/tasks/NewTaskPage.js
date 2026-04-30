@@ -8,14 +8,32 @@ import "../../styles/Tasks.css";
 
 const DRIVER_ROLE = "DRIVER";
 
+// All database tables as entity types
 const ENTITY_TYPES = [
-  { id: "bookings", label: "Bookings" },
-  { id: "manifests", label: "Manifests" },
-  { id: "exceptions", label: "Exceptions" },
-  { id: "dispatch", label: "Dispatch" },
-  { id: "vehicles", label: "Vehicles & Fleet" },
-  { id: "routes", label: "Routes" },
-  { id: "invoices", label: "Invoices" },
+  { id: 1, label: "User" },
+  { id: 2, label: "AuditLog" },
+  { id: 3, label: "Shipper" },
+  { id: 4, label: "Booking" },
+  { id: 5, label: "Vehicle" },
+  { id: 6, label: "Driver" },
+  { id: 7, label: "VehicleAvailability" },
+  { id: 8, label: "Load" },
+  { id: 9, label: "Route" },
+  { id: 10, label: "RoutingRule" },
+  { id: 11, label: "Dispatch" },
+  { id: 12, label: "DriverAck" },
+  { id: 13, label: "Manifest" },
+  { id: 14, label: "Handover" },
+  { id: 15, label: "ProofOfDelivery" },
+  { id: 16, label: "Tariff" },
+  { id: 17, label: "BillingLine" },
+  { id: 18, label: "Invoice" },
+  { id: 19, label: "Exception" },
+  { id: 20, label: "Claim" },
+  { id: 21, label: "Report" },
+  { id: 22, label: "KPI" },
+  { id: 23, label: "Notification" },
+  { id: 24, label: "Task" },
 ];
 
 const getUserId = (user) => {
@@ -116,14 +134,16 @@ export default function NewTaskPage() {
             <h1 className="tasks-title">Add Task</h1>
             <p className="tasks-subtitle">Create a new task and assign ownership</p>
           </div>
+
           <div className="tasks-header-actions">
-            <button className="tasks-btn" onClick={() => navigate("/tasks")}>← Back</button>
+            <button className="tasks-btn tasks-btn-back" onClick={() => navigate("/tasks")} title="Back">←</button>
+
           </div>
         </div>
 
         {error && <div className="tasks-error">⚠ {error}</div>}
 
-        <form className="tasks-form-card" onSubmit={onSubmit}>
+        <form id="task-form" className="tasks-form-card" onSubmit={onSubmit}>
           <div className="tasks-form-grid">
             <div className="tasks-form-field">
               <label>Assigned To *</label>
@@ -143,7 +163,7 @@ export default function NewTaskPage() {
             </div>
 
             <div className="tasks-form-field">
-              <label>Related To (Entity Type)</label>
+              <label>Related Table</label>
               <select
                 value={form.relatedEntityType}
                 onChange={(e) => onChange("relatedEntityType", e.target.value)}
@@ -192,9 +212,9 @@ export default function NewTaskPage() {
           </div>
 
           <div className="tasks-form-actions">
-            <button type="button" className="tasks-btn" onClick={() => navigate("/tasks")}>Cancel</button>
-            <button type="submit" className="tasks-btn tasks-btn-primary" disabled={saving}>
-              {saving ? "Creating..." : "Create Task"}
+        
+            <button type="submit" className="tasks-btn tasks-btn-primary" title="Create Task" disabled={saving}>
+              {saving ? "Creating..." : "Create"}
             </button>
           </div>
         </form>

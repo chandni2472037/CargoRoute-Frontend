@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "../../components/Layout";
-import { getTaskById } from "../../api/taskApi";
+import { getTaskById, updateTask, getEntityName } from "../../api/taskApi";
 import { getUserFromToken } from "../../utils/jwtUtils";
+import axios from "axios";
 import "../../styles/Tasks.css";
 
 const DRIVER_ROLE = "DRIVER";
@@ -39,6 +40,10 @@ export default function TaskDetailPage() {
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [userMap, setUserMap] = useState({});
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ description: "", status: "PENDING", dueDate: "" });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -47,6 +52,11 @@ export default function TaskDetailPage() {
       try {
         const res = await getTaskById(id);
         setTask(res.data);
+        setEditForm({
+          description: res?.data?.description || "",
+          status: normalizeStatus(res?.data?.status),
+          dueDate: res?.data?.dueDate || "",
+        });
       } catch (err) {
         setError(err?.response?.data?.message || "Unable to load task.");
         setTask(null);
@@ -58,6 +68,25 @@ export default function TaskDetailPage() {
     load();
   }, [id]);
 
+  useEffect(() => {
+    const loadUsersMap = async () => {
+      try {
+        const res = await axios.get("http://localhost:8080/cargoRoute/user/getAllUsers", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        const rows = Array.isArray(res.data) ? res.data : [];
+        const map = {};
+        rows.forEach((u) => {
+          if (u?.userID != null) map[String(u.userID)] = u.name || `User ${u.userID}`;
+        });
+        setUserMap(map);
+      } catch {
+        setUserMap({});
+      }
+    };
+    loadUsersMap();
+  }, []);
+
   const blockedByScope = useMemo(() => {
     if (!task) return false;
     if (!isDriver) return false;
@@ -66,6 +95,29 @@ export default function TaskDetailPage() {
   }, [task, isDriver, currentUserId]);
 
   const normalizedStatus = normalizeStatus(task?.status);
+
+  const assigneeName = task?.assignedTo != null
+    ? userMap[String(task.assignedTo)] || `User ${task.assignedTo}`
+    : "-";
+
+  const handleSaveEdits = async () => {
+    if (!task?.taskID) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await updateTask(task.taskID, {
+        description: editForm.description,
+        status: editForm.status,
+        dueDate: editForm.dueDate,
+      });
+      setTask(res?.data || task);
+      setEditMode(false);
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || "Unable to update task right now.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Layout>
@@ -76,7 +128,12 @@ export default function TaskDetailPage() {
             <p className="tasks-subtitle">Review task information</p>
           </div>
           <div className="tasks-header-actions">
-            <button className="tasks-btn" onClick={() => navigate("/tasks")}>← Back to Tasks</button>
+            <button className="tasks-btn tasks-btn-back" onClick={() => navigate("/tasks")} title="Back">←</button>
+            {!loading && !error && task && !blockedByScope && (
+              <button className="tasks-btn tasks-btn-primary" onClick={() => setEditMode((v) => !v)}>
+                {editMode ? "Close Edit" : "Edit"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -91,17 +148,77 @@ export default function TaskDetailPage() {
         ) : (
           <div className="tasks-detail-card">
             <div className="tasks-detail-grid">
-              <div className="tasks-detail-row"><span>Task ID</span><strong>{task.taskID ?? "-"}</strong></div>
-              <div className="tasks-detail-row"><span>Status</span><strong><span className={`tasks-status tasks-status-${normalizedStatus.toLowerCase()}`}>{statusText(normalizedStatus)}</span></strong></div>
-              <div className="tasks-detail-row"><span>Assigned To</span><strong>{task.assignedTo ?? "-"}</strong></div>
-              <div className="tasks-detail-row"><span>Related Entity</span><strong>{task.relatedCode || task.relatedEntityID || "-"}</strong></div>
-              <div className="tasks-detail-row"><span>Due Date</span><strong>{task.dueDate || "-"}</strong></div>
+              <div className="tasks-detail-row"><span>Task Reference</span><strong>{task.taskID ?? "-"}</strong></div>
+              <div className="tasks-detail-row">
+                <span>Workflow Status</span>
+                <strong>
+                  {editMode ? (
+                    <select
+                      className="tasks-inline-select"
+                      value={editForm.status}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
+                    >
+                      <option value="PENDING">Pending</option>
+                      <option value="INPROGRESS">In Progress</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+                  ) : (
+                    <span className={`tasks-status tasks-status-${normalizedStatus.toLowerCase()}`}>{statusText(normalizedStatus)}</span>
+                  )}
+                </strong>
+              </div>
+              <div className="tasks-detail-row"><span>Assigned To</span><strong>{assigneeName}</strong></div>
+              <div className="tasks-detail-row"><span>Linked Record</span><strong>{task.relatedCode || getEntityName(task.relatedEntityID) || "-"}</strong></div>
+              <div className="tasks-detail-row">
+                <span>Planned Due Date</span>
+                <strong>
+                  {editMode ? (
+                    <input
+                      type="date"
+                      className="tasks-inline-input"
+                      value={editForm.dueDate}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+                    />
+                  ) : (
+                    task.dueDate || "-"
+                  )}
+                </strong>
+              </div>
             </div>
 
             <div className="tasks-detail-description">
-              <h3>Description</h3>
-              <p>{task.description || "-"}</p>
+              <h3>Task Summary</h3>
+              {editMode ? (
+                <textarea
+                  className="tasks-inline-textarea"
+                  rows={4}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                />
+              ) : (
+                <p>{task.description || "-"}</p>
+              )}
             </div>
+
+            {editMode && (
+              <div className="tasks-form-actions" style={{ marginTop: 14 }}>
+                <button className="tasks-btn" onClick={() => {
+                  setEditMode(false);
+                  setEditForm({ description: task.description || "", status: normalizeStatus(task.status), dueDate: task.dueDate || "" });
+                }}>
+                  Revert
+                </button>
+                <button className="tasks-btn tasks-btn-primary" onClick={handleSaveEdits} disabled={saving}>
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            )}
+            {editMode && (
+              <div className="tasks-inline-note">
+                If save fails, backend update endpoint may be unavailable.
+              </div>
+            )}
           </div>
         )}
       </div>
