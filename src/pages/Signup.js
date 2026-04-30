@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { signupUser } from "../api/authApi";
 import { useNavigate } from "react-router-dom";
+import { USER_ROLES } from "../utils/constants"; // Ensure this import exists
 import "../styles/Auth.css";
 
-export default function Signup() {
+// All roles are available at public signup.
+const SIGNUP_ROLES = USER_ROLES || [
+  "Dispatcher", "Shipper", "Driver", "WarehouseManager", 
+  "BillingClerk", "FleetManager", "Analyst", "Admin"
+];
 
+export default function Signup() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -49,38 +55,41 @@ export default function Signup() {
           <input
             placeholder="Full Name"
             required
+            value={form.name}
             onChange={e => setForm({ ...form, name: e.target.value })}
           />
 
           <input
             placeholder="Email Address"
+            type="email"
             required
+            value={form.email}
             onChange={e => setForm({ ...form, email: e.target.value })}
           />
 
           <input
             placeholder="Phone Number"
             required
+            value={form.phone}
             onChange={e => setForm({ ...form, phone: e.target.value })}
           />
 
           <select
             onChange={e => setForm({ ...form, role: e.target.value })}
+            value={form.role}
           >
-            <option>Dispatcher</option>
-            <option>Shipper</option>
-            <option>Driver</option>
-            <option>WarehouseManager</option>
-            <option>BillingClerk</option>
-            <option>FleetManager</option>
-            <option>Analyst</option>
-            <option>Admin</option>
+            {SIGNUP_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
           </select>
 
           <input
             type="password"
             placeholder="Create Password"
             required
+            value={form.password}
             onChange={e => setForm({ ...form, password: e.target.value })}
           />
 
@@ -91,7 +100,7 @@ export default function Signup() {
           )}
 
           <button type="submit" disabled={loading}>
-            {loading ? 'Creating account…' : 'Create Account'}
+            {loading ? 'Creating account…' : 'Create'}
           </button>
 
           <span className="link">

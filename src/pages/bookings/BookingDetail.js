@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { getBookingById, updateBookingStatus } from '../../api/bookingsApi';
 import '../../styles/Bookings.css';
+import { AuthContext } from '../../auth/AuthContext';
 
 const SITE_MAP = {
   1: 'Mumbai Warehouse',
@@ -14,6 +15,8 @@ const SITE_MAP = {
   7: 'Pune Terminal',
   8: 'Ahmedabad Crossdock',
 };
+
+// Helper to get site name from ID
 const siteName = (id) => SITE_MAP[id] || `Site #${id}`;
 
 const STATUS_CONFIG = {
@@ -33,23 +36,32 @@ function fmtDT(dt) {
     hour: '2-digit', minute: '2-digit',
   });
 }
+
 function fmtBookingId(id) {
   return `BK${String(id).padStart(3, '0')}`;
 }
 
 export default function BookingDetail() {
-  const { id }   = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [booking, setBooking]     = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [notFound, setNotFound]   = useState(false);
+  const [booking, setBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [newStatus, setNewStatus] = useState('');
-  const [saving, setSaving]       = useState(false);
-  const [msg, setMsg]             = useState({ type: '', text: '' });
+  const [saving, setSaving] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [msg, setMsg] = useState({ type: '', text: '' });
+  const { user } = useContext(AuthContext);
+
+  const operationalRoles = ['Dispatcher', 'Driver'];
+  const canEditStatus = user?.role && operationalRoles.includes(user.role);
 
   useEffect(() => {
     getBookingById(id)
-      .then((data) => { setBooking(data); setNewStatus(data.status); })
+      .then((data) => { 
+        setBooking(data); 
+        setNewStatus(data.status); 
+      })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [id]);
@@ -58,11 +70,14 @@ export default function BookingDetail() {
     if (!newStatus || newStatus === booking.status) return;
     setSaving(true);
     try {
-      const updated = await updateBookingStatus(id, newStatus);
-      setBooking(updated);
+      await updateBookingStatus(id, newStatus);
+      const fresh = await getBookingById(id);
+      setBooking(fresh);
       setMsg({ type: 'success', text: 'Status updated successfully.' });
+      return true;
     } catch (err) {
       setMsg({ type: 'error', text: err.response?.data?.message || 'Failed to update status.' });
+      return false;
     } finally {
       setSaving(false);
       setTimeout(() => setMsg({ type: '', text: '' }), 3000);
@@ -80,8 +95,7 @@ export default function BookingDetail() {
   return (
     <Layout>
       <div className="booking-detail-page">
-
-        {/* ── Header ────────────────────────────────────────── */}
+        {/* Header */}
         <div className="detail-header">
           <div className="detail-header-left">
             <button className="back-btn" onClick={() => navigate('/bookings')}>←</button>
@@ -91,33 +105,16 @@ export default function BookingDetail() {
             </div>
           </div>
           <div className="detail-header-right">
-            <span className={`status-badge status-badge-lg ${st.cls}`}>{st.label}</span>
+            {canEditStatus && !isEditMode && (
+              <button className="btn-edit" onClick={() => { setIsEditMode(true); setNewStatus(booking.status); }}>
+                Edit
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ── Status update bar ────────────────────────────── */}
-        <div className="status-update-bar">
-          <label className="status-update-label">Update Status:</label>
-          <select className="status-update-select" value={newStatus}
-            onChange={(e) => setNewStatus(e.target.value)}>
-            {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-              <option key={k} value={k}>{v.label}</option>
-            ))}
-          </select>
-          <button className="btn-primary" onClick={handleStatusUpdate}
-            disabled={saving || newStatus === booking.status}>
-            {saving ? 'Saving…' : 'Update'}
-          </button>
-          {msg.text && (
-            <span className={`update-msg ${msg.type === 'error' ? 'update-msg-error' : ''}`}>
-              {msg.text}
-            </span>
-          )}
-        </div>
-
-        {/* ── Detail grid ──────────────────────────────────── */}
+        {/* Detail Grid */}
         <div className="detail-grid">
-
           <div className="detail-card">
             <h3 className="detail-card-title">Shipper Information</h3>
             <div className="detail-field">
@@ -181,7 +178,7 @@ export default function BookingDetail() {
             </div>
           </div>
 
-          <div className="detail-card detail-card-wide">
+          <div className="detail-card">
             <h3 className="detail-card-title">Cargo Details</h3>
             <div className="detail-row-3">
               <div className="detail-field">
@@ -193,41 +190,91 @@ export default function BookingDetail() {
                 <div className="detail-value">{booking.volumeM3} m³</div>
               </div>
               <div className="detail-field">
-                <div className="detail-label">Pieces</div>
+                <div className="detail-label">Units</div>
                 <div className="detail-value">{booking.pieces}</div>
               </div>
             </div>
-            <div className="detail-row" style={{ marginTop: 16 }}>
+            <div className="detail-row-3" style={{ marginTop: 16 }}>
               <div className="detail-field">
                 <div className="detail-label">Commodity</div>
                 <div className="detail-value">{booking.commodity}</div>
               </div>
+              {flags.length > 0 && (
+                <div className="detail-field">
+                  <div className="detail-label" style={{ marginBottom: 6 }}>Special Handling</div>
+                  <div className="flags-list">
+                    {flags.map((f) => (
+                      <span key={f} className="flag-tag">{f.replace(/_/g, ' ')}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            {flags.length > 0 && (
-              <div style={{ marginTop: 14 }}>
-                <div className="detail-label" style={{ marginBottom: 8 }}>Special Handling</div>
-                <div className="flags-list">
-                  {flags.map((f) => (
-                    <span key={f} className="flag-tag">{f.replace(/_/g, ' ')}</span>
-                  ))}
+          </div>
+
+          <div className="detail-card">
+            <h3 className="detail-card-title">Booking Meta</h3>
+            <div className="detail-row-2">
+              <div className="detail-field">
+                <div className="detail-label">Created At</div>
+                <div className="detail-value">{fmtDT(booking.createdAt)}</div>
+              </div>
+              <div className="detail-field">
+                <div className="meta-status-label-row">
+                  <span className="detail-label">Status</span>
+                </div>
+                <div className="detail-value meta-status-value">
+                  {!isEditMode || !canEditStatus ? (
+                    <span className={`status-badge ${st.cls}`}>{st.label}</span>
+                  ) : (
+                    <div className="meta-status-edit-row">
+                      <select 
+                        className="status-update-select" 
+                        value={newStatus}
+                        onChange={(e) => setNewStatus(e.target.value)}
+                      >
+                        {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                          <option key={k} value={k}>{v.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {msg.text && (
+                    <span className={`update-msg ${msg.type === 'error' ? 'update-msg-error' : ''}`}>
+                      {msg.text}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            {booking.updatedAt && (
+              <div className="detail-row-2" style={{ marginTop: 14 }}>
+                <div className="detail-field">
+                  <div className="detail-label">Updated At</div>
+                  <div className="detail-value">{fmtDT(booking.updatedAt)}</div>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="detail-card">
-            <h3 className="detail-card-title">Booking Meta</h3>
-            <div className="detail-field">
-              <div className="detail-label">Created At</div>
-              <div className="detail-value">{fmtDT(booking.createdAt)}</div>
+          {/* Edit actions */}
+          {isEditMode && canEditStatus && (
+            <div className="meta-edit-actions">
+              <button
+                className="btn-primary"
+                onClick={async () => { const ok = await handleStatusUpdate(); if (ok) setIsEditMode(false); }}
+                disabled={saving || newStatus === booking.status}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => { setNewStatus(booking.status); setIsEditMode(false); }}
+              >
+                Cancel
+              </button>
             </div>
-          </div>
-        </div>
-
-        {/* ── Footer ───────────────────────────────────────── */}
-        <div className="detail-footer">
-          <button className="btn-secondary" onClick={() => navigate('/bookings')}>← Back to Bookings</button>
-          <button className="btn-primary" onClick={() => navigate('/bookings/new')}>+ New Booking</button>
+          )}
         </div>
       </div>
     </Layout>

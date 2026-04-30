@@ -1,48 +1,55 @@
 import axios from 'axios';
 
-// BookingService runs on port 7070 (no Spring Security – no auth header needed)
-const BASE_URL = process.env.REACT_APP_BOOKINGS_API_URL || 'http://localhost:7070';
+// All requests routed through API Gateway on port 8084
+const BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8089';
 
-/** GET /cargoRoute/getBookings */
+/** GET /cargoRoute/booking/getBookings */
 export const getAllBookings = () =>
-  axios.get(`${BASE_URL}/cargoRoute/getBookings`).then(r => r.data);
+  axios.get(`${BASE_URL}/cargoRoute/booking/getBookings`).then(r => r.data);
 
-/** GET /cargoRoute/getBooking/:id */
+/** GET /cargoRoute/booking/getBookingById/:id */
 export const getBookingById = (id) =>
-  axios.get(`${BASE_URL}/cargoRoute/getBooking/${id}`).then(r => r.data);
+  axios.get(`${BASE_URL}/cargoRoute/booking/getBookingById/${id}`).then(r => r.data);
 
-/** POST /cargoRoute/addBooking */
+/** POST /cargoRoute/booking/addBooking */
 export const createBooking = (data) =>
-  axios.post(`${BASE_URL}/cargoRoute/addBooking`, data).then(r => r.data);
+  axios.post(`${BASE_URL}/cargoRoute/booking/addBooking`, data).then(r => r.data);
 
-/** PATCH /cargoRoute/updateBookingStatus/:id?status=STATUS */
+/** PATCH /cargoRoute/booking/updateBookingStatus/:id  { status } */
 export const updateBookingStatus = (id, status) =>
-  axios.patch(`${BASE_URL}/cargoRoute/updateBookingStatus/${id}`, null, {
-    params: { status },
-  }).then(r => r.data);
+  axios.patch(`${BASE_URL}/cargoRoute/booking/updateBookingStatus/${id}`, { status }).then(r => r.data);
 
-/** GET /cargoRoute/getBookingsByStatus/:status */
+/** GET /cargoRoute/booking/getBookingsByStatus/:status */
 export const getBookingsByStatus = (status) =>
-  axios.get(`${BASE_URL}/cargoRoute/getBookingsByStatus/${status}`).then(r => r.data);
+  axios.get(`${BASE_URL}/cargoRoute/booking/getBookingsByStatus/${status}`).then(r => r.data);
 
-/** GET /cargoRoute/getBookingsByShipper/:shipperId */
+/** GET /cargoRoute/booking/getBookingsByShipperID/:shipperId */
 export const getBookingsByShipper = (shipperId) =>
-  axios.get(`${BASE_URL}/cargoRoute/getBookingsByShipper/${shipperId}`).then(r => r.data);
+  axios.get(`${BASE_URL}/cargoRoute/booking/getBookingsByShipperID/${shipperId}`).then(r => r.data);
 
 /* ── Shippers ───────────────────────────────────────────────────── */
 
-/** GET /cargoRoute/getShippers */
+/** GET /cargoRoute/shipper/getShippers */
 export const getAllShippers = () =>
-  axios.get(`${BASE_URL}/cargoRoute/getShippers`).then(r => r.data);
+  axios.get(`${BASE_URL}/cargoRoute/shipper/getShippers`).then(r => r.data);
 
-/** GET /cargoRoute/getShipper/:id */
+/** GET /cargoRoute/shipper/getShipper/:id */
 export const getShipperById = (id) =>
-  axios.get(`${BASE_URL}/cargoRoute/getShipper/${id}`).then(r => r.data);
+  axios.get(`${BASE_URL}/cargoRoute/shipper/getShipper/${id}`).then(r => r.data);
 
-/** POST /cargoRoute/addShipper */
+/** POST /cargoRoute/shipper/addShipper */
 export const createShipper = (data) =>
-  axios.post(`${BASE_URL}/cargoRoute/addShipper`, data).then(r => r.data);
+  axios.post(`${BASE_URL}/cargoRoute/shipper/addShipper`, data).then(r => r.data);
 
-/** PUT /cargoRoute/updateShipper/:id */
+/** PUT /cargoRoute/shipper/updateShipper/:id */
 export const updateShipper = (id, data) =>
-  axios.put(`${BASE_URL}/cargoRoute/updateShipper/${id}`, data).then(r => r.data);
+  axios.put(`${BASE_URL}/cargoRoute/shipper/updateShipper/${id}`, data).then(r => r.data);
+
+/** POST /cargoRoute/importBookings – multipart CSV upload */
+export const importBookingsCsv = (file) => {
+  const form = new FormData();
+  form.append('file', file);
+  return axios.post(`${BASE_URL}/cargoRoute/booking/importBookings`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data);
+};

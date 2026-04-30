@@ -32,7 +32,7 @@ export default function Login() {
       const res = await loginUser(form);
       login(res.data.token);
       const user = getUserFromToken();
-      const redirect = ROLE_REDIRECT[user?.role] || '/bookings';
+      const redirect = ROLE_REDIRECT[user?.role] || '/dashboard';
       navigate(redirect);
     } catch (err) {
       setError(err.response?.data?.message || "Invalid email or password. Please try again.");

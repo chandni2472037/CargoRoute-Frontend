@@ -1,71 +1,60 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import { getAllBookings } from '../../api/bookingsApi';
+import { getAllBookings, importBookingsCsv } from '../../api/bookingsApi';
+import { siteName, STATUS_CONFIG } from '../../utils/constants';
+import { exportCSV } from '../../utils/csvExport';
 import '../../styles/Bookings.css';
+import { AuthContext } from '../../auth/AuthContext';
+import Pagination from '../../components/Pagination';
 
-// Static site map (no Site service yet – IDs assigned on first insert)
-const SITE_MAP = {
-  1: 'Mumbai Warehouse',
-  2: 'Delhi Distribution Center',
-  3: 'Bengaluru Depot',
-  4: 'Chennai Hub',
-  5: 'Hyderabad Facility',
-  6: 'Kolkata Depot',
-  7: 'Pune Terminal',
-  8: 'Ahmedabad Crossdock',
-};
-const siteName = (id) => SITE_MAP[id] || `Site #${id}`;
-
-// Full BookingStatus enum from backend
-const STATUS_CONFIG = {
-  DRAFT:      { label: 'Draft',      cls: 'status-draft'      },
-  SUBMITTED:  { label: 'Submitted',  cls: 'status-submitted'  },
-  PLANNED:    { label: 'Planned',    cls: 'status-planned'    },
-  DISPATCHED: { label: 'Dispatched', cls: 'status-dispatched' },
-  IN_TRANSIT: { label: 'In Transit', cls: 'status-in-transit' },
-  DELIVERED:  { label: 'Delivered',  cls: 'status-delivered'  },
-  CANCELLED:  { label: 'Cancelled',  cls: 'status-cancelled'  },
-};
-
-function fmtDate(dt) {
-  if (!dt) return '–';
-  return new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-function fmtTime(dt) {
-  if (!dt) return '';
-  return new Date(dt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-}
-function fmtBookingId(id) {
+function formatBookingId(id) {
   return `BK${String(id).padStart(3, '0')}`;
 }
 
 export default function BookingsList() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const ALLOWED_CREATE_ROLES = ['Admin', 'Shipper'];
   const [bookings, setBookings]         = useState([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState('');
   const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [importing, setImporting]       = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const fileInputRef                    = useRef(null);
+  const [currentPage, setCurrentPage]   = useState(1);
+  const PAGE_SIZE = 4;
+  const [openMenuId, setOpenMenuId] = useState(null);
 
-  useEffect(() => {
+  const loadBookings = () => {
+    setLoading(true);
     getAllBookings()
       .then(setBookings)
-      .catch(() => setError('Could not load bookings. Is BookingService running on port 7070?'))
+      .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadBookings(); }, []);
+
+  // Reset to first page whenever search/filter changes
+  useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
 
   const filtered = bookings.filter((b) => {
     const q = search.toLowerCase();
     const shipperName = b.shipper?.name?.toLowerCase() || '';
     const matchSearch =
       !q ||
-      fmtBookingId(b.bookingID).toLowerCase().includes(q) ||
+      formatBookingId(b.bookingID).toLowerCase().includes(q) ||
       shipperName.includes(q) ||
       b.commodity?.toLowerCase().includes(q);
     const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const stats = {
     total:     bookings.length,
@@ -76,19 +65,71 @@ export default function BookingsList() {
 
   const handleExport = () => {
     const headers = ['Booking ID','Shipper','Origin Site','Destination Site',
-      'Pickup Start','Pickup End','Weight (kg)','Volume (m³)','Pieces','Commodity','Status'];
+      'Pickup Start','Pickup End','Weight (kg)','Volume (m³)','Units','Commodity','Status'];
     const rows = filtered.map((b) => [
-      fmtBookingId(b.bookingID), b.shipper?.name,
+      formatBookingId(b.bookingID), b.shipper?.name,
       siteName(b.originSiteID), siteName(b.destinationSiteID),
       b.pickupWindowStart, b.pickupWindowEnd,
       b.weightKg, b.volumeM3, b.pieces, b.commodity, b.status,
     ]);
-    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
+    exportCSV('bookings.csv', headers, rows);
+  };
+
+  const handleDownloadTemplate = () => {
+    const header = 'shipperId,originSiteID,destinationSiteID,pickupWindowStart,pickupWindowEnd,deliveryWindowStart,deliveryWindowEnd,weightKg,volumeM3,pieces,commodity,specialHandlingFlags';
+    const sample = '1,1,2,2026-04-15T10:00:00,2026-04-15T14:00:00,2026-04-16T09:00:00,2026-04-16T17:00:00,500,2.5,10,Electronics,';
+    const csv  = [header, sample].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href = url; a.download = 'bookings.csv'; a.click();
+    a.href = url; a.download = 'bookings_template.csv'; a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    // Frontend: validate file extension (and optionally MIME) before sending to backend
+    if (!file.name || !file.name.toLowerCase().endsWith('.csv')) {
+      setImportResult({ error: 'Unsupported file format. Please upload a CSV file.' });
+      return;
+    }
+    // Read header row and validate required column headers (case-sensitive)
+    const REQUIRED_HEADERS = [
+      'shipperId', 'originSiteID', 'destinationSiteID',
+      'pickupWindowStart', 'pickupWindowEnd',
+      'deliveryWindowStart', 'deliveryWindowEnd',
+      'weightKg', 'volumeM3', 'pieces', 'commodity'
+    ];
+
+    try {
+      const text = await file.text();
+      const firstLine = text.split(/\r?\n/)[0] || '';
+      const headerCols = firstLine.split(',').map((h) => h.trim());
+      const missing = REQUIRED_HEADERS.filter((h) => !headerCols.includes(h));
+      if (missing.length > 0) {
+        const label = missing.length === 1 ? 'Missing required column header: ' : 'Missing required column headers: ';
+        setImportResult({ error: `Import failed.\n\n${label}${missing.join(', ')}\n\nNo bookings were imported.` });
+        return;
+      }
+    } catch (err) {
+      setImportResult({ error: 'Import failed. Could not read the CSV file.' });
+      return;
+    }
+
+    // Header validated — proceed to upload
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const result = await importBookingsCsv(file);
+      setImportResult(result);
+      if (result.imported > 0) loadBookings();
+    } catch (err) {
+      setImportResult({ error: err.response?.data?.error || 'Import failed. Check your CSV format.' });
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -98,12 +139,17 @@ export default function BookingsList() {
         {/* ── Page header ─────────────────────────────────────── */}
         <div className="page-header">
           <div>
-            <h1 className="page-title">Bookings</h1>
+            <div className="page-title-group">
+              <span className="page-title-icon">📦</span>
+              <h1 className="page-title">Bookings</h1>
+            </div>
             <p className="page-subtitle">Manage all freight bookings and orders</p>
           </div>
-          <button className="btn-primary" onClick={() => navigate('/bookings/new')}>
-            + New Booking
-          </button>
+          {ALLOWED_CREATE_ROLES.includes(user?.role) && (
+            <button className="btn-primary" title="New Booking" onClick={() => navigate('/bookings/new')} style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}>
+              +
+            </button>
+          )}
         </div>
 
         {/* ── Stats cards ─────────────────────────────────────── */}
@@ -111,7 +157,6 @@ export default function BookingsList() {
           <div className="stat-card">
             <div className="stat-label">Total Bookings</div>
             <div className="stat-value">{stats.total}</div>
-            <span className="stat-icon" role="img" aria-label="package">📦</span>
           </div>
           <div className="stat-card">
             <div className="stat-label">Pending</div>
@@ -150,18 +195,58 @@ export default function BookingsList() {
             </div>
             <div className="toolbar-right">
               <div className="filter-wrapper">
-                <span>⚙️</span>
                 <select className="status-select" value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="ALL">All Status</option>
+                  <option value="ALL">Status</option>
                   {Object.entries(STATUS_CONFIG).map(([k, v]) => (
                     <option key={k} value={k}>{v.label}</option>
                   ))}
                 </select>
               </div>
+              {ALLOWED_CREATE_ROLES.includes(user?.role) && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    style={{ display: 'none' }}
+                    onChange={handleImportFile}
+                  />
+                  <button className="btn-import" onClick={handleDownloadTemplate} title="Download CSV template">
+                    📋 Template
+                  </button>
+                  <button
+                    className="btn-import btn-import-primary"
+                    onClick={() => fileInputRef.current.click()}
+                    disabled={importing}
+                  >
+                    {importing ? '⏳ Importing…' : '⬆ Import CSV'}
+                  </button>
+                </>
+              )}
               <button className="btn-export" onClick={handleExport}>⬇ Export</button>
             </div>
           </div>
+
+          {/* ── Import result banner ─────────────────────────── */}
+          {importResult && (
+            <div className={`import-result ${importResult.error ? 'import-result-error' : importResult.failed > 0 ? 'import-result-warn' : 'import-result-ok'}`}>
+              {importResult.error ? (
+                <span>❌ {importResult.error}</span>
+              ) : (
+                <span>
+                  ✅ <strong>{importResult.imported}</strong> booking{importResult.imported !== 1 ? 's' : ''} imported
+                  {importResult.failed > 0 && (
+                    <span className="import-errors">
+                      &nbsp;·&nbsp;⚠ {importResult.failed} row{importResult.failed !== 1 ? 's' : ''} failed:
+                      <ul>{importResult.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+                    </span>
+                  )}
+                </span>
+              )}
+              <button className="import-result-close" onClick={() => setImportResult(null)}>✕</button>
+            </div>
+          )}
 
           {loading ? (
             <div className="empty-state">Loading bookings…</div>
@@ -170,12 +255,10 @@ export default function BookingsList() {
               <table className="bookings-table">
                 <thead>
                   <tr>
-                    <th>Booking ID</th>
+                    <th>Booking Id</th>
                     <th>Shipper</th>
-                    <th>Origin → Destination</th>
-                    <th>Pickup Window</th>
-                    <th>Weight / Volume</th>
-                    <th>Commodity</th>
+                    <th>Origin</th>
+                    <th>Destination</th>
                     <th>Status</th>
                     <th>Action</th>
                   </tr>
@@ -183,48 +266,47 @@ export default function BookingsList() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="empty-state">
-                        {bookings.length === 0 ? 'No bookings yet. Create your first booking.' : 'No bookings match your search.'}
+                      <td colSpan={6} className="empty-state">
+                        {bookings.length === 0
+                          ? (ALLOWED_CREATE_ROLES.includes(user?.role)
+                              ? 'No bookings yet. Create your first booking.'
+                              : 'No bookings available to display.')
+                          : 'No bookings match your search.'}
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((b) => {
+                    paginated.map((b) => {
                       const st = STATUS_CONFIG[b.status] || { label: b.status, cls: 'status-pending' };
                       return (
                         <tr key={b.bookingID} className="table-row"
                           onClick={() => navigate(`/bookings/${b.bookingID}`)}>
-                          <td className="booking-id-cell">{fmtBookingId(b.bookingID)}</td>
+                          <td className="booking-id-cell">{formatBookingId(b.bookingID)}</td>
                           <td>{b.shipper?.name || '–'}</td>
-                          <td>
-                            <div className="route-cell">
-                              <span className="route-origin">{siteName(b.originSiteID)}</span>
-                              <span className="route-arrow">→</span>
-                              <span className="route-dest">{siteName(b.destinationSiteID)}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="window-cell">
-                              <span>{fmtDate(b.pickupWindowStart)}</span>
-                              <span className="window-times">
-                                {fmtTime(b.pickupWindowStart)} – {fmtTime(b.pickupWindowEnd)}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="weight-cell">
-                              <span>{b.weightKg?.toLocaleString()} kg</span>
-                              <span className="vol-text">{b.volumeM3} m³</span>
-                            </div>
-                          </td>
-                          <td>{b.commodity}</td>
+                          <td>{siteName(b.originSiteID)}</td>
+                          <td>{siteName(b.destinationSiteID)}</td>
                           <td>
                             <span className={`status-badge ${st.cls}`}>{st.label}</span>
                           </td>
                           <td>
-                            <button className="btn-view"
-                              onClick={(e) => { e.stopPropagation(); navigate(`/bookings/${b.bookingID}`); }}>
-                              View
-                            </button>
+                            <div className="action-menu" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                className="kebab-btn"
+                                aria-label="Actions"
+                                onClick={() => setOpenMenuId(openMenuId === b.bookingID ? null : b.bookingID)}
+                              >
+                                ⋯
+                              </button>
+                              {openMenuId === b.bookingID && (
+                                <div className="kebab-dropdown">
+                                  <button
+                                    className="kebab-item"
+                                    onClick={() => { setOpenMenuId(null); navigate(`/bookings/${b.bookingID}`); }}
+                                  >
+                                    View
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -233,6 +315,15 @@ export default function BookingsList() {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {/* ── Pagination ── */}
+          {!loading && totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
       </div>

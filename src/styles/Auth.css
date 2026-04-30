@@ -69,10 +69,11 @@
  
 .auth-card button {
   width: 100%;
-  padding: 12px;
-  background: #1f3a5f;
+  padding: 8px 14px;
+  background: #3b82f6;
   color: white;
-  font-size: 16px;
+  font-size: 14px;
+  height: 36px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -85,9 +86,12 @@
 .link {
   display: block;
   margin-top: 15px;
-  text-align: center;
+  text-align: right;
+  font-size: 13px;
 }
+
  
+
 /* Inline feedback messages */
 .auth-message {
   display: flex;
@@ -111,4 +115,59 @@
   color: #15803d;
   border: 1px solid #bbf7d0;
 }
- 
+
+/* ================================================================
+   RESPONSIVE — Auth
+   ================================================================ */
+
+/* ── Tablet (≤ 900px): shrink left panel ─────────────────────── */
+@media (max-width: 900px) {
+  .auth-left {
+    padding: 48px 40px;
+    flex: 0 0 40%;
+  }
+
+  .auth-left h1 {
+    font-size: 32px;
+  }
+
+  .auth-left p,
+  .auth-left li {
+    font-size: 15px;
+  }
+}
+
+/* ── Mobile (≤ 640px): stack vertically, hide left panel ─────── */
+@media (max-width: 640px) {
+  .auth-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .auth-left {
+    display: none;
+  }
+
+  .auth-right {
+    flex: 1;
+    align-items: flex-start;
+    padding: 32px 16px;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 28px 20px;
+    box-shadow: none;
+    border: 1px solid #e4e7ed;
+  }
+}
+
+
+.auth-card input,
+.auth-card select {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}

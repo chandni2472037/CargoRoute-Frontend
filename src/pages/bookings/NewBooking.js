@@ -4,7 +4,6 @@ import Layout from '../../components/Layout';
 import { createBooking, getAllShippers } from '../../api/bookingsApi';
 import '../../styles/Bookings.css';
 
-// Static sites – numeric IDs must match what's in the DB
 const SITES = [
   { id: 1, name: 'Mumbai Warehouse' },
   { id: 2, name: 'Delhi Distribution Center' },
@@ -17,12 +16,14 @@ const SITES = [
 ];
 
 const HANDLING_FLAGS = [
-  { key: 'FRAGILE',               label: 'Fragile' },
-  { key: 'HEAVY',                 label: 'Heavy' },
-  { key: 'HAZMAT',                label: 'Hazmat' },
-  { key: 'TEMPERATURE_CONTROLLED',label: 'Temperature Controlled' },
-  { key: 'HIGH_VALUE',            label: 'High Value' },
+  { key: 'FRAGILE',                label: 'Fragile' },
+  { key: 'HEAVY',                  label: 'Heavy' },
+  { key: 'HAZMAT',                 label: 'Hazmat' },
+  { key: 'TEMPERATURE_CONTROLLED', label: 'Temperature Controlled' },
+  { key: 'HIGH_VALUE',             label: 'High Value' },
 ];
+
+const MAX_COMMODITY_LENGTH = 50;
 
 const EMPTY_FORM = {
   shipperID: '',
@@ -36,39 +37,52 @@ const EMPTY_FORM = {
   volumeM3: '',
   pieces: '',
   commodity: '',
-  specialHandlingFlags: [],   // held as array in UI, joined as string for API
+  specialHandlingFlags: [],
   status: 'SUBMITTED',
 };
 
 function validate(form) {
   const err = {};
-  if (!form.shipperID)         err.shipperID         = 'Shipper is required';
-  if (!form.originSiteID)      err.originSiteID      = 'Origin site is required';
-  if (!form.destinationSiteID) err.destinationSiteID = 'Destination site is required';
+  if (!form.shipperID)          err.shipperID         = 'Shipper is required';
+  if (!form.originSiteID)       err.originSiteID      = 'Origin site is required';
+  if (!form.destinationSiteID)  err.destinationSiteID = 'Destination site is required';
   if (form.originSiteID && form.originSiteID === form.destinationSiteID)
     err.destinationSiteID = 'Origin and destination must differ';
-  if (!form.pickupWindowStart)    err.pickupWindowStart    = 'Required';
-  if (!form.pickupWindowEnd)      err.pickupWindowEnd      = 'Required';
-  if (!form.deliveryWindowStart)  err.deliveryWindowStart  = 'Required';
-  if (!form.deliveryWindowEnd)    err.deliveryWindowEnd    = 'Required';
+  if (!form.pickupWindowStart)     err.pickupWindowStart    = 'Required';
+  if (!form.pickupWindowEnd)       err.pickupWindowEnd      = 'Required';
+  if (!form.deliveryWindowStart)   err.deliveryWindowStart  = 'Required';
+  if (!form.deliveryWindowEnd)     err.deliveryWindowEnd    = 'Required';
   if (!form.weightKg || Number(form.weightKg) <= 0) err.weightKg = 'Valid weight required';
   if (!form.volumeM3 || Number(form.volumeM3) <= 0) err.volumeM3 = 'Valid volume required';
-  if (!form.pieces   || Number(form.pieces)   <  1)  err.pieces   = 'At least 1 piece required';
-  if (!form.commodity.trim()) err.commodity = 'Commodity is required';
+  if (!form.pieces   || Number(form.pieces)   <  1)  err.pieces   = 'At least 1 unit required';
+  
+  if (!form.commodity.trim()) {
+    err.commodity = 'Commodity is required';
+  } else if (form.commodity.trim().length < 2) {
+    err.commodity = 'Commodity must be at least 2 characters.';
+  } else if (!/^[a-zA-Z0-9 ,]+$/.test(form.commodity.trim())) {
+    err.commodity = 'Commodity must only contain letters, numbers, spaces, and commas.';
+  } else if (form.commodity.trim().length > MAX_COMMODITY_LENGTH) {
+    err.commodity = `Commodity must not exceed ${MAX_COMMODITY_LENGTH} characters.`;
+  }
   return err;
 }
 
 export default function NewBooking() {
   const navigate = useNavigate();
-  const [form, setForm]           = useState(EMPTY_FORM);
-  const [errors, setErrors]       = useState({});
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage]     = useState({ type: '', text: '' });
-  const [shippers, setShippers]   = useState([]);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [shippers, setShippers] = useState([]);
 
-  // Fetch shippers from BookingService
   useEffect(() => {
-    getAllShippers().then(setShippers).catch(() => {});
+    getAllShippers()
+      .then(setShippers)
+      .catch((err) => {
+        console.error('Failed to load shippers:', err?.response?.status, err?.response?.data || err.message);
+        setMessage({ type: 'error', text: 'Could not load shippers. Please refresh the page.' });
+      });
   }, []);
 
   const handleChange = (e) => {
@@ -93,22 +107,20 @@ export default function NewBooking() {
     setSubmitting(true);
     setMessage({ type: '', text: '' });
 
-    // Build BookingDTO matching the backend shape
     const payload = {
-      shipper:             { shipperID: Number(form.shipperID) },
-      originSiteID:        Number(form.originSiteID),
-      destinationSiteID:   Number(form.destinationSiteID),
-      pickupWindowStart:   form.pickupWindowStart,
-      pickupWindowEnd:     form.pickupWindowEnd,
-      deliveryWindowStart: form.deliveryWindowStart,
-      deliveryWindowEnd:   form.deliveryWindowEnd,
-      weightKg:            Number(form.weightKg),
-      volumeM3:            Number(form.volumeM3),
-      pieces:              Number(form.pieces),
-      commodity:           form.commodity,
-      // Backend stores as single String – join array with comma
+      shipper:              { shipperID: Number(form.shipperID) },
+      originSiteID:         Number(form.originSiteID),
+      destinationSiteID:    Number(form.destinationSiteID),
+      pickupWindowStart:    form.pickupWindowStart,
+      pickupWindowEnd:      form.pickupWindowEnd,
+      deliveryWindowStart:  form.deliveryWindowStart,
+      deliveryWindowEnd:    form.deliveryWindowEnd,
+      weightKg:             Number(form.weightKg),
+      volumeM3:             Number(form.volumeM3),
+      pieces:               Number(form.pieces),
+      commodity:            form.commodity,
       specialHandlingFlags: form.specialHandlingFlags.join(','),
-      status:              form.status,
+      status:               form.status,
     };
 
     try {
@@ -116,17 +128,21 @@ export default function NewBooking() {
       setMessage({ type: 'success', text: 'Booking created successfully! Redirecting…' });
       setTimeout(() => navigate('/bookings'), 1500);
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to create booking. Please try again.' });
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to create booking.' });
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleReset = () => {
+    setForm(EMPTY_FORM);
+    setErrors({});
+    setMessage({ type: '', text: '' });
+  };
+
   return (
     <Layout>
       <div className="booking-form-page">
-
-        {/* Page header */}
         <div className="form-page-header">
           <button className="back-btn" onClick={() => navigate('/bookings')}>←</button>
           <div>
@@ -136,8 +152,7 @@ export default function NewBooking() {
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
-
-          {/* ── Shipper Information ─────────────────────────────── */}
+          {/* Shipper Information */}
           <div className="form-section">
             <h2 className="form-section-title">Shipper Information</h2>
             <div className="form-field" style={{ maxWidth: 480 }}>
@@ -149,14 +164,12 @@ export default function NewBooking() {
                   <option key={s.shipperID} value={s.shipperID}>{s.name}</option>
                 ))}
               </select>
-              {shippers.length === 0 && (
-                <span className="field-hint">No shippers found. Add a shipper first.</span>
-              )}
+              {shippers.length === 0 && <span className="field-hint">No shippers found.</span>}
               {errors.shipperID && <span className="error-msg">{errors.shipperID}</span>}
             </div>
           </div>
 
-          {/* ── Pickup & Delivery Locations ─────────────────────── */}
+          {/* Locations */}
           <div className="form-section">
             <h2 className="form-section-title">Pickup &amp; Delivery Locations</h2>
             <div className="form-row form-row-2">
@@ -181,12 +194,15 @@ export default function NewBooking() {
             </div>
           </div>
 
-          {/* ── Pickup & Delivery Windows ───────────────────────── */}
+          {/* Windows */}
           <div className="form-section">
             <h2 className="form-section-title">Pickup &amp; Delivery Windows</h2>
             <div className="form-row form-row-2">
-              {[['pickupWindowStart','Pickup Window Start'],['pickupWindowEnd','Pickup Window End'],
-                ['deliveryWindowStart','Delivery Window Start'],['deliveryWindowEnd','Delivery Window End']
+              {[
+                ['pickupWindowStart','Pickup Window Start'],
+                ['pickupWindowEnd','Pickup Window End'],
+                ['deliveryWindowStart','Delivery Window Start'],
+                ['deliveryWindowEnd','Delivery Window End']
               ].map(([name, label]) => (
                 <div className="form-field" key={name}>
                   <label>{label} <span className="required">*</span></label>
@@ -198,33 +214,33 @@ export default function NewBooking() {
             </div>
           </div>
 
-          {/* ── Cargo Details ───────────────────────────────────── */}
+          {/* Cargo Details */}
           <div className="form-section">
             <h2 className="form-section-title">Cargo Details</h2>
             <div className="form-row form-row-3" style={{ marginBottom: 16 }}>
               <div className="form-field">
                 <label>Weight (kg) <span className="required">*</span></label>
                 <input type="number" name="weightKg" value={form.weightKg} onChange={handleChange}
-                  placeholder="0" min="0" className={errors.weightKg ? 'input-error' : ''} />
+                  placeholder="0" className={errors.weightKg ? 'input-error' : ''} />
                 {errors.weightKg && <span className="error-msg">{errors.weightKg}</span>}
               </div>
               <div className="form-field">
                 <label>Volume (m³) <span className="required">*</span></label>
                 <input type="number" name="volumeM3" value={form.volumeM3} onChange={handleChange}
-                  placeholder="0" min="0" step="0.1" className={errors.volumeM3 ? 'input-error' : ''} />
+                  placeholder="0" step="0.1" className={errors.volumeM3 ? 'input-error' : ''} />
                 {errors.volumeM3 && <span className="error-msg">{errors.volumeM3}</span>}
               </div>
               <div className="form-field">
-                <label>Number of Pieces <span className="required">*</span></label>
+                <label>Number of Units <span className="required">*</span></label>
                 <input type="number" name="pieces" value={form.pieces} onChange={handleChange}
-                  placeholder="0" min="1" className={errors.pieces ? 'input-error' : ''} />
+                  placeholder="0" className={errors.pieces ? 'input-error' : ''} />
                 {errors.pieces && <span className="error-msg">{errors.pieces}</span>}
               </div>
             </div>
             <div className="form-field" style={{ marginBottom: 20 }}>
               <label>Commodity <span className="required">*</span></label>
               <input type="text" name="commodity" value={form.commodity} onChange={handleChange}
-                placeholder="e.g., Electronics, Industrial Parts, Consumer Goods"
+                placeholder="e.g., Electronics" maxLength={MAX_COMMODITY_LENGTH}
                 className={errors.commodity ? 'input-error' : ''} />
               {errors.commodity && <span className="error-msg">{errors.commodity}</span>}
             </div>
@@ -242,7 +258,7 @@ export default function NewBooking() {
             </div>
           </div>
 
-          {/* ── Actions ─────────────────────────────────────────── */}
+          {/* Actions */}
           <div className="form-section">
             <h2 className="form-section-title">Actions</h2>
             {message.text && (
@@ -250,12 +266,11 @@ export default function NewBooking() {
                 <span>{message.type === 'success' ? '✔' : '⚠'}</span> {message.text}
               </div>
             )}
-            <div className="action-buttons">
-              <button type="submit" className="btn-primary btn-full" disabled={submitting}>
-                💾 {submitting ? 'Creating…' : 'Create Booking'}
+            <div className="form-actions-row">
+              <button type="button" className="btn-secondary" onClick={handleReset}>Reset</button>
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? 'Creating…' : 'Create Booking'}
               </button>
-              <button type="button" className="btn-secondary btn-full"
-                onClick={() => navigate('/bookings')}>Cancel</button>
             </div>
           </div>
         </form>
@@ -263,4 +278,3 @@ export default function NewBooking() {
     </Layout>
   );
 }
-

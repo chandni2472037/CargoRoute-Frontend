@@ -10,22 +10,36 @@
   padding: 24px;
   background: linear-gradient(135deg, #eaf6fd, #f5fbff);
   min-height: 100vh;
+  width: 100%;
 }
 
 .page-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 16px; /* reduced to prevent small overflows */
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.page-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.page-title-icon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .page-title {
   font-size: 26px;
   font-weight: 700;
-  color: #3b82f6;
-  margin: 0 0 4px;
+  color: #1a2b45;
+  margin: 0;
   line-height: 1.2;
 }
 
@@ -54,6 +68,30 @@
 .btn-primary:hover    { background: #194da1; transform: translateY(-1px); }
 .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
 
+/* ── Expand-on-hover button ─────────────────────────────────────── */
+.btn-expand {
+  overflow: hidden;
+  padding: 10px 14px;
+  transition: background 0.15s;
+}
+
+.btn-expand-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  vertical-align: middle;
+  transition: max-width 0.3s ease, opacity 0.25s ease, margin-left 0.25s ease;
+  margin-left: 0;
+}
+
+.btn-expand:hover .btn-expand-label {
+  max-width: 160px;
+  opacity: 1;
+  margin-left: 5px;
+}
+
 .btn-secondary {
   background: #f0f0f0;
   color: #1a1a1a;
@@ -69,7 +107,24 @@
   transition: all 0.2s ease;
   white-space: nowrap;
 }
-.btn-secondary:hover { background: #e8e8e8; border-color: #d0d0d0; }
+.btn-secondary:hover { background: #f9fafb; }
+
+/* Edit button uses the app primary color to match other primary actions */
+.btn-edit {
+  background: #3b82f6; /* reuse primary blue used by .btn-primary */
+  color: #ffffff; /* white for contrast */
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-edit:hover { background: #2563eb; }
+
 
 .btn-full { width: 100%; justify-content: center; }
 
@@ -101,12 +156,49 @@
 }
 .btn-view:hover { background: #3b82f6; color: #fff; border-color: #2563eb; }
 
+/* Kebab (three-dot) action menu */
+.action-menu { position: relative; display: inline-block; }
+.kebab-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: #374151;
+  border-radius: 6px;
+}
+.kebab-btn:hover { background: #f3f4f6; }
+.kebab-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #fff;
+  border: 1px solid #e6e9ef;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+  border-radius: 8px;
+  min-width: 120px;
+  z-index: 30;
+}
+.kebab-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+.kebab-item:hover { background: #f8fafc; }
+
 /* ── Stats grid ─────────────────────────────────────────────────── */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 
 @media (max-width: 900px) {
@@ -115,31 +207,35 @@
 
 .stat-card {
   background: #fff;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e4e7ed;
   border-radius: 12px;
-  padding: 20px;
+  padding: 14px 18px;
   display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.2s ease;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+  border-left: 4px solid #e4e7ed;
+  transition: box-shadow 0.15s;
 }
-
 .stat-card:hover {
-  border-color: #d0d0d0;
-  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.09);
 }
 
 .stat-label {
   font-size: 12px;
-  color: #888;
-  margin-bottom: 8px;
+  color: #94a3b8;
   font-weight: 600;
+  text-transform: capitalize;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--deep-navy);
   margin-bottom: 8px;
@@ -163,6 +259,7 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 16px 20px;
 }
 
 .section-title {
@@ -264,9 +361,10 @@
   background: #3b82f6;
   color: #ffffff;
   font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.3px;
-  border-bottom: 2px solid var(--deep-navy);
+  font-size: 13px;
+  text-transform: capitalize;
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid #2563eb;
   white-space: nowrap;
 }
 
@@ -386,6 +484,70 @@
   font-weight: 600;
   color: #3b82f6;
   margin: 0 0 18px;
+}
+
+/* ── Shipper inline form card ────────────────────────────────── */
+.shipper-form-card {
+  margin-bottom: 24px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 28px 32px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+.shipper-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.shipper-form-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a2b45;
+  margin: 0;
+}
+
+.shipper-form-header .form-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #94a3b8;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+.shipper-form-header .form-close-btn:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.shipper-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.shipper-form-divider {
+  border: none;
+  border-top: 1px dashed #e2e8f0;
+  margin: 0;
+}
+
+.shipper-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 4px;
 }
 
 /* Field grid helpers */
@@ -516,7 +678,6 @@
 /* ================================================================
    BOOKING DETAIL
    ================================================================ */
-.booking-detail-page { max-width: 960px; }
 
 .detail-header {
   display: flex;
@@ -615,6 +776,20 @@
 
 .detail-card-wide { grid-column: 1 / -1; }
 
+/* Center a single detail card and keep responsive behavior */
+.detail-card-leftwide {
+  /* Span the full grid row but keep the card content left-aligned and visually wide */
+  grid-column: 1 / -1;
+  width: 75%;
+  max-width: 980px;
+  margin-left: 0; /* keep left aligned */
+  justify-self: start;
+}
+
+@media (max-width: 700px) {
+  .detail-card-leftwide { grid-column: 1 / -1; width: 100%; }
+}
+
 .detail-card-title {
   font-size: 15px;
   font-weight: 700;
@@ -681,3 +856,265 @@
   gap: 12px;
 }
 
+/* Row action menu (kebab) */
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.icon-btn:hover { background: #f1f5f9; }
+.row-action-menu { display: flex; flex-direction: column; min-width: 120px; }
+.row-action-menu .menu-item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.row-action-menu .menu-item:hover { background: #f8fafc; }
+
+/* Booking Meta two-column layout (status on the right) */
+/* Booking Meta status field helpers */
+
+/* STATUS label + pencil icon sit on the same baseline as the label text */
+.meta-status-label-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  /* matches .detail-label visual height */
+}
+.meta-status-label-row .detail-label { margin: 0; }
+
+/* badge / edit controls flow naturally below the label */
+.meta-status-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.meta-status-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap; /* keep select + buttons on a single row */
+}
+
+.edit-icon-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.12s, color 0.12s;
+  /* negative margin so the button doesn't add extra height to the label row */
+  margin-top: -1px;
+}
+.edit-icon-btn:hover { background: #f1f5f9; color: #374151; }
+.edit-icon { width: 13px; height: 13px; display: block; }
+
+@media (max-width: 640px) {
+  /* keep edit controls on a single row even on small screens; allow horizontal overflow if needed */
+  .meta-status-edit-row { flex-wrap: nowrap; overflow-x: auto; }
+}
+
+/* Prevent the select from shrinking and ensure buttons stay inline */
+.meta-status-edit-row .status-update-select {
+  min-width: 140px;
+  flex-shrink: 0;
+}
+.meta-status-edit-row .btn-primary,
+.meta-status-edit-row .btn-secondary {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Action row containing Save / Cancel positioned below the meta card */
+.meta-edit-actions {
+  display: flex;
+  justify-content: center; /* center-align buttons horizontally */
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  grid-column: 1 / -1; /* span full width of the detail grid so centering is page-wide */
+}
+
+@media (max-width: 640px) {
+  .meta-edit-actions { justify-content: center; }
+}
+
+/* Ensure action buttons have consistent height and visual balance */
+.meta-edit-actions .btn-primary,
+.meta-edit-actions .btn-secondary {
+  min-height: 40px;
+  padding: 8px 18px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ================================================================
+   RESPONSIVE — Bookings / shared module styles
+   ================================================================ */
+
+/* ── Tablet (≤ 900px) ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .page-title { font-size: 22px; }
+
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .detail-row-3 { grid-template-columns: 1fr 1fr; }
+
+  .form-row-3 > .form-field { flex: 1 1 calc(50% - 8px); }
+
+  .bookings-page,
+  .booking-detail-page,
+  .booking-form-page { max-width: 100%; }
+}
+
+/* ── Mobile (≤ 640px) ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .page-title { font-size: 20px; }
+
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Table toolbar stacks search + filters vertically */
+  .table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-wrapper { max-width: 100%; }
+
+  .toolbar-right {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-wrapper { flex: 1 1 auto; }
+
+  /* Table scrolls horizontally — already has .table-wrapper */
+  .bookings-table th,
+  .bookings-table td {
+    padding: 10px 10px;
+    font-size: 12px;
+  }
+
+  /* Detail grids collapse to single column */
+  .detail-grid { grid-template-columns: 1fr; }
+  .detail-row-2 { grid-template-columns: 1fr; }
+  .detail-row-3 { grid-template-columns: 1fr; }
+
+  /* Form rows stack fully */
+  .form-row-2 > .form-field,
+  .form-row-3 > .form-field { flex: 1 1 100%; min-width: 0; }
+
+  .checkbox-grid { grid-template-columns: 1fr; }
+
+  /* Status update bar wraps neatly */
+  .status-update-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .status-update-select { width: 100%; }
+
+  /* Detail booking ID smaller */
+  .detail-booking-id { font-size: 18px; }
+
+  /* Form sections tighter padding */
+  .form-section { padding: 16px; }
+  .table-section { padding: 16px; }
+
+  /* Bulk import row stacks */
+  .bulk-import-row { flex-direction: column; align-items: flex-start; }
+
+  /* Detail footer stacks */
+  .detail-footer { flex-direction: column; }
+}
+
+/* ── Small mobile (≤ 400px) ────────────────────────────────────── */
+@media (max-width: 400px) {
+  .stats-grid { grid-template-columns: 1fr; }
+
+  .stat-value { font-size: 22px; }
+}
+
+/* ── Pagination ─────────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.pagination-right {
+  justify-content: flex-end;
+}
+
+.pagination-btn {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-weight: 500;
+}
+.pagination-btn:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pagination-btn-active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+.pagination-btn-active:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #fff !important;
+}
+
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: #6b7280;
+  user-select: none;
+}
+
+.pagination-info {
+  margin-left: 8px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ── Dashboard two-column grid (responsive) ─────────────────────── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 768px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+}

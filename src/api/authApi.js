@@ -1,9 +1,36 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8082/auth";
+
+const AUTH_URL = "http://localhost:8089/cargoRoute/auth";
+const USER_URL = "http://localhost:8089/user";
+
+const authHeader = () => ({
+  Authorization: `Bearer ${localStorage.getItem("token")}`,
+});
 
 export const loginUser = (data) =>
-  axios.post(`${API_URL}/login`, data);
+  axios.post(`${AUTH_URL}/login`, data);
 
 export const signupUser = (data) =>
-  axios.post(`${API_URL}/signup`, data);  
+  axios.post(`${AUTH_URL}/signup`, data);
+
+export const signoutUser = () =>
+  axios.post(`${AUTH_URL}/signout`, {}, { headers: authHeader() });
+
+// ── Admin-only user management ────────────────────────────────────────────────
+
+/** Admin: create a new user (including Shipper-linked users) */
+export const createAdminUser = (data) =>
+  axios.post(`${USER_URL}/register`, data, { headers: authHeader() }).then(r => r.data);
+
+/** Admin: get all users */
+export const getAllUsersAdmin = () =>
+  axios.get(`${USER_URL}`, { headers: authHeader() }).then(r => r.data);
+
+/** Admin: get single user by ID */
+export const getUserByIdAdmin = (id) =>
+  axios.get(`${USER_URL}/${id}`, { headers: authHeader() }).then(r => r.data);
+
+/** Admin: update an existing user */
+export const updateAdminUser = (id, data) =>
+  axios.put(`${USER_URL}/${id}`, data, { headers: authHeader() }).then(r => r.data);
