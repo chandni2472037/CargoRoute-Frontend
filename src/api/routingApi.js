@@ -1,7 +1,12 @@
 // filepath: src/api/routingApi.js
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_ROUTING_API_URL || 'http://localhost:8085';
+const BASE_URL = process.env.REACT_APP_ROUTING_API_URL || 'http://localhost:8080';
+
+const authHeader = () => {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const apiClient = axios.create({
   baseURL: `${BASE_URL}/cargoRoute`,
@@ -16,6 +21,16 @@ const directApiClient = axios.create({
 const proxyApiClient = axios.create({
   baseURL: '',
   headers: { 'Content-Type': 'application/json' },
+});
+
+[apiClient, directApiClient, proxyApiClient].forEach((client) => {
+  client.interceptors.request.use((config) => ({
+    ...config,
+    headers: {
+      ...(config.headers || {}),
+      ...authHeader(),
+    },
+  }));
 });
 
 const normalizeListResponse = (data) => {

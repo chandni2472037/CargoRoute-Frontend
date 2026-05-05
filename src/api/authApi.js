@@ -1,8 +1,8 @@
 import axios from "axios";
 
 
-const AUTH_URL = "http://localhost:8089/cargoRoute/auth";
-const USER_URL = "http://localhost:8089/user";
+const AUTH_URL = "http://localhost:8080/cargoRoute/auth";
+const USER_URL = "http://localhost:8080/cargoRoute/user";
 
 const authHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -25,7 +25,7 @@ export const createAdminUser = (data) =>
 
 /** Admin: get all users */
 export const getAllUsersAdmin = () =>
-  axios.get(`${USER_URL}`, { headers: authHeader() }).then(r => r.data);
+  axios.get(`${USER_URL}/getAllUsers`, { headers: authHeader() }).then(r => r.data);
 
 /** Admin: get single user by ID */
 export const getUserByIdAdmin = (id) =>

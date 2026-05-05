@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import BackButton from '../../components/BackButton';
 import { createShipper } from '../../api/bookingsApi';
 import '../../styles/Bookings.css';
 
@@ -84,7 +85,7 @@ export default function NewShipper() {
 
             <div className="form-actions-row" style={{ marginTop: 20 }}>
               <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Creating…' : 'Add'}</button>
-              <button type="button" className="btn-secondary" onClick={() => navigate('/shippers')}>Cancel</button>
+              <BackButton to="/shippers" label="Back" />
             </div>
           </div>
         </form>

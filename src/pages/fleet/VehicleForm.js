@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { getVehicleById, createVehicle, updateVehicle, getAvailableDrivers } from '../../api/fleetApi';
 import '../../styles/Fleet.css';
-
+ 
 export default function VehicleForm({ isEdit = false }) {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -23,30 +23,30 @@ export default function VehicleForm({ isEdit = false }) {
     lastMaintenanceAt: '',
     availabilities: [],
   });
-
+ 
   const toDateInputValue = (value) => {
     if (!value) return '';
     const raw = String(value);
     const datePart = raw.includes('T') ? raw.split('T')[0] : raw.slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : '';
   };
-
+ 
   const toDateTimeInputValue = (value) => {
     if (!value) return '';
     const raw = String(value).replace(' ', 'T');
     return raw.length >= 16 ? raw.slice(0, 16) : '';
   };
-
+ 
   const toLocalDateTime = (value) => {
     if (!value) return null;
     return value.length === 16 ? `${value}:00` : value;
   };
-
+ 
   const isAvailabilityRowBlank = (row) => {
     if (!row) return true;
     return !row.date && !row.startTime && !row.endTime && !row.status && !row.reasonNote;
   };
-
+ 
   const fetchAvailableDrivers = useCallback(async () => {
     try {
       setDriversLoading(true);
@@ -59,7 +59,7 @@ export default function VehicleForm({ isEdit = false }) {
       setDriversLoading(false);
     }
   }, []);
-
+ 
   const fetchVehicle = useCallback(async () => {
     try {
       setLoading(true);
@@ -89,15 +89,15 @@ export default function VehicleForm({ isEdit = false }) {
       setLoading(false);
     }
   }, [id]);
-
+ 
   useEffect(() => {
     if (isEdit && id) fetchVehicle();
   }, [id, isEdit, fetchVehicle]);
-
+ 
   useEffect(() => {
     fetchAvailableDrivers();
   }, [fetchAvailableDrivers]);
-
+ 
   const validators = {
     regNumber: (val) => {
       if (!val.trim()) return 'Registration number is required.';
@@ -126,15 +126,18 @@ export default function VehicleForm({ isEdit = false }) {
       return '';
     },
   };
-
+ 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+     if (name === 'driverID' && value === '') {
+      alert('Assign a driver first');
+    }
     if (validators[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: validators[name](value) }));
     }
   };
-
+ 
   const handleAvailabilityChange = (index, field, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -142,13 +145,13 @@ export default function VehicleForm({ isEdit = false }) {
         rowIndex === index ? { ...row, [field]: value } : row
       ),
     }));
-
+ 
     const key = `availability-${index}`;
     if (fieldErrors[key]) {
       setFieldErrors((prev) => ({ ...prev, [key]: '' }));
     }
   };
-
+ 
   const addAvailabilityRow = () => {
     setFormData((prev) => ({
       ...prev,
@@ -164,7 +167,7 @@ export default function VehicleForm({ isEdit = false }) {
       ],
     }));
   };
-
+ 
   const removeAvailabilityRow = (index) => {
     setFormData((prev) => ({
       ...prev,
@@ -176,7 +179,7 @@ export default function VehicleForm({ isEdit = false }) {
       return next;
     });
   };
-
+ 
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Run all validations
@@ -185,7 +188,7 @@ export default function VehicleForm({ isEdit = false }) {
       const msg = validators[field](formData[field]);
       if (msg) errors[field] = msg;
     });
-
+ 
     const validAvailabilities = [];
     (formData.availabilities || []).forEach((row, index) => {
       if (isAvailabilityRowBlank(row)) return;
@@ -205,7 +208,7 @@ export default function VehicleForm({ isEdit = false }) {
         reasonNote: row.reasonNote?.trim() || null,
       });
     });
-
+ 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -236,7 +239,7 @@ export default function VehicleForm({ isEdit = false }) {
       setSubmitting(false);
     }
   };
-
+ 
   if (loading) {
     return (
       <Layout>
@@ -246,22 +249,22 @@ export default function VehicleForm({ isEdit = false }) {
       </Layout>
     );
   }
-
+ 
   return (
     <Layout>
       <div className="fleet-container form-page-container">
         <div className="form-header">
           <h1>{isEdit ? 'Edit Vehicle' : 'Add Vehicle'}</h1>
         </div>
-
+ 
         {error && (
           <div className="alert alert-error">
             <span>⚠</span> {error}
           </div>
         )}
-
+ 
         <form onSubmit={handleSubmit} className="vehicle-form vehicle-form-grid">
-
+ 
           {/* Registration Number */}
           <div className="form-group">
             <label htmlFor="regNumber">Registration Number *</label>
@@ -276,7 +279,7 @@ export default function VehicleForm({ isEdit = false }) {
             />
             {fieldErrors.regNumber && <span className="field-error">{fieldErrors.regNumber}</span>}
           </div>
-
+ 
           {/* Vehicle Type */}
           <div className="form-group">
             <label htmlFor="type">Vehicle Type *</label>
@@ -293,7 +296,7 @@ export default function VehicleForm({ isEdit = false }) {
               <option value="TRAILER">Trailer</option>
             </select>
           </div>
-
+ 
           {/* Max Weight */}
           <div className="form-group">
             <label htmlFor="maxWeightKg">Max Weight (kg) *</label>
@@ -309,7 +312,7 @@ export default function VehicleForm({ isEdit = false }) {
             />
             {fieldErrors.maxWeightKg && <span className="field-error">{fieldErrors.maxWeightKg}</span>}
           </div>
-
+ 
           {/* Max Volume */}
           <div className="form-group">
             <label htmlFor="maxVolumeM3">Max Volume (m³) *</label>
@@ -325,7 +328,7 @@ export default function VehicleForm({ isEdit = false }) {
             />
             {fieldErrors.maxVolumeM3 && <span className="field-error">{fieldErrors.maxVolumeM3}</span>}
           </div>
-
+ 
           {/* Status */}
           <div className="form-group">
             <label htmlFor="status">Status *</label>
@@ -342,7 +345,7 @@ export default function VehicleForm({ isEdit = false }) {
               <option value="MAINTENANCE">Maintenance</option>
             </select>
           </div>
-
+ 
           {/* Last Maintenance Date */}
           <div className="form-group">
             <label htmlFor="lastMaintenanceAt">Last Maintenance Date</label>
@@ -355,7 +358,7 @@ export default function VehicleForm({ isEdit = false }) {
               className="form-input"
             />
           </div>
-
+ 
           {/* Driver ID */}
           <div className="form-group">
             <label htmlFor="driverID">Assigned Driver</label>
@@ -379,7 +382,7 @@ export default function VehicleForm({ isEdit = false }) {
             </select>
             {fieldErrors.driverID && <span className="field-error">{fieldErrors.driverID}</span>}
           </div>
-
+ 
           <div className="form-group vehicle-availability-form-group">
             <div className="vehicle-availability-header">
               <label>Vehicle Availabilities</label>
@@ -391,7 +394,7 @@ export default function VehicleForm({ isEdit = false }) {
                 + Add Availability
               </button>
             </div>
-
+ 
             {formData.availabilities.length > 0 ? (
               <div className="avail-table-wrap">
                 <table className="avail-mini-table">
@@ -470,14 +473,14 @@ export default function VehicleForm({ isEdit = false }) {
             ) : (
               <p className="availability-hint">No availabilities added yet.</p>
             )}
-
+ 
             {Object.entries(fieldErrors)
               .filter(([key, value]) => key.startsWith('availability-') && value)
               .map(([key, value]) => (
                 <span key={key} className="field-error">{value}</span>
               ))}
           </div>
-
+ 
           {/* Actions - full width */}
           <div className={`form-actions ${!isEdit ? 'create-form-actions' : 'create-form-actions'}`}>
             <button type="button" onClick={() => navigate('/fleet/vehicles')} className="btn-back icon-btn create-back-icon-btn">
@@ -488,9 +491,11 @@ export default function VehicleForm({ isEdit = false }) {
               {submitting ? 'Saving...' : isEdit ? 'Update Vehicle' : 'Add Vehicle'}
             </button>
           </div>
-
+ 
         </form>
       </div>
     </Layout>
   );
 }
+ 
+ 

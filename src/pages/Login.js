@@ -7,7 +7,7 @@ import "../styles/Auth.css";
 
 // Map role → landing page
 const ROLE_REDIRECT = {
-  Admin:          '/fleet/vehicles',
+  Admin:          '/dashboard',
   Dispatcher:     '/fleet/vehicles',
   FleetManager:   '/fleet/vehicles',
   Shipper:        '/bookings',
@@ -32,7 +32,9 @@ export default function Login() {
       const res = await loginUser(form);
       login(res.data.token);
       const user = getUserFromToken();
-      const redirect = ROLE_REDIRECT[user?.role] || '/dashboard';
+      
+      // const redirect = ROLE_REDIRECT[user?.role] || '/dashboard';
+      const redirect =  '/dashboard';
       navigate(redirect);
     } catch (err) {
       setError(err.response?.data?.message || "Invalid email or password. Please try again.");

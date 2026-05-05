@@ -1,22 +1,36 @@
 import React, { useContext } from 'react';
-import { Navigate } from 'react-router-dom';
 import { AuthContext } from '../auth/AuthContext';
-import ShipperDashboard from './ShipperDashboard';
+import AdminDashboard from './dashboards/AdminDashboard';
+import DriverDashboard from './dashboards/DriverDashboard';
+import ShipperDashboard from './dashboards/ShipperDashboard';
+import DispatcherDashboard from './dashboards/DispatcherDashboard';
+import FleetManagerDashboard from './dashboards/FleetManagerDashboard';
+import WarehouseManagerDashboard from './dashboards/WarehouseManagerDashboard';
+import BillingClerkDashboard from './dashboards/BillingClerkDashboard';
+import AnalystDashboard from './dashboards/AnalystDashboard';
 
 export default function DashboardRouter() {
   const { user } = useContext(AuthContext);
   const role = user?.role || '';
 
-  if (role === 'Shipper' || role === 'SHIPPER') {
-    return <ShipperDashboard />;
+  switch (role.toLowerCase()) {
+    case 'admin':
+      return <AdminDashboard />;
+    case 'driver':
+      return <DriverDashboard />;
+    case 'shipper':
+      return <ShipperDashboard />;
+    case 'dispatcher':
+      return <DispatcherDashboard />;
+    case 'fleetmanager':
+      return <FleetManagerDashboard />;
+    case 'warehousemanager':
+      return <WarehouseManagerDashboard />;
+    case 'billingclerk':
+      return <BillingClerkDashboard />;
+    case 'analyst':
+      return <AnalystDashboard />;
+    default:
+      return <div>Dashboard not configured for role: {role}</div>;
   }
-
-  // If an AdminDashboard component exists in the project, render it here.
-  // Fallback: redirect Admins to bookings for now so /dashboard is not blank.
-  if (role === 'Admin' || role === 'ADMIN') {
-    return <Navigate to="/bookings" replace />;
-  }
-
-  // Other roles: redirect to bookings
-  return <Navigate to="/bookings" replace />;
 }

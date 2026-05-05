@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { getAllLoads, getAllRoutes } from '../../api/routingApi';
-import '../styles/Routing.css';
-
+import '../../styles/Routing.css';
+ 
 export default function LoadPlanning() {
   const [loads, setLoads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,15 +14,15 @@ export default function LoadPlanning() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
   const navigate = useNavigate();
-
+ 
   const normalizeLoad = useCallback((item) => {
     if (!item) return null;
-
-    const raw = item?.loadDto ? { ...item.loadDto, vehicle: item.vehicle || null } : item;
-
+ 
+    const raw = item?.load ? { ...item.load, vehicle: item.vehicle || null } : item;
+ 
     const loadID = raw.loadID ?? raw.id ?? raw.loadId;
     if (!loadID) return null;
-
+ 
     return {
       ...raw,
       loadID,
@@ -32,25 +32,25 @@ export default function LoadPlanning() {
       totalVolumeM3: raw.totalVolumeM3 ?? 0,
     };
   }, []);
-
+ 
   const deriveLoadsFromRoutes = useCallback(async () => {
     const routes = await getAllRoutes();
     const routeList = Array.isArray(routes) ? routes : (routes?.value || []);
     const byLoadId = new Map();
-
+ 
     routeList.forEach((route) => {
       const load = route?.load;
       if (!load) return;
-
+ 
       const normalized = normalizeLoad(load);
       if (normalized?.loadID && !byLoadId.has(normalized.loadID)) {
         byLoadId.set(normalized.loadID, normalized);
       }
     });
-
+ 
     return Array.from(byLoadId.values());
   }, [normalizeLoad]);
-
+ 
   // Fetch all loads
   const fetchLoads = useCallback(async () => {
     setLoading(true);
@@ -76,31 +76,31 @@ export default function LoadPlanning() {
       setLoading(false);
     }
   }, [deriveLoadsFromRoutes, normalizeLoad]);
-
+ 
   useEffect(() => {
     fetchLoads();
   }, [fetchLoads]);
-
+ 
   // Filter loads
   const filteredLoads = loads.filter((load) => {
     const matchesSearch =
       (load.loadCode && load.loadCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (load.loadID && load.loadID.toString().includes(searchTerm)) ||
       (load.totalWeightKg && load.totalWeightKg.toString().includes(searchTerm));
-
+ 
     const matchesStatus =
       filterStatus === 'all' ||
       (load.status && load.status.toLowerCase() === filterStatus.toLowerCase());
-
+ 
     return matchesSearch && matchesStatus;
   });
-
+ 
   const getSortTime = (value) => {
     if (!value) return Number.NaN;
     const time = new Date(value).getTime();
     return Number.isNaN(time) ? Number.NaN : time;
   };
-
+ 
   const sortedLoads = [...filteredLoads].sort((a, b) => {
     const compareByDirection = (aValue, bValue, direction) => {
       const aMissing = Number.isNaN(aValue);
@@ -112,7 +112,7 @@ export default function LoadPlanning() {
       if (direction === 'earliest') return aValue - bValue;
       return 0;
     };
-
+ 
     if (deliverySort !== 'none') {
       const deliveryCompare = compareByDirection(
         getSortTime(a.plannedEnd),
@@ -121,25 +121,25 @@ export default function LoadPlanning() {
       );
       if (deliveryCompare !== 0) return deliveryCompare;
     }
-
+ 
     return 0;
   });
-
+ 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterStatus, deliverySort, loads]);
-
+ 
   const totalPages = Math.max(1, Math.ceil(sortedLoads.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedLoads = sortedLoads.slice(startIndex, endIndex);
-
+ 
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
-
+ 
   // Calculate statistics
   const stats = {
     total: loads.length,
@@ -150,7 +150,7 @@ export default function LoadPlanning() {
     }).length,
     delivered: loads.filter((l) => (l.status || '').toUpperCase() === 'DELIVERED').length,
   };
-
+ 
   // Get status color
   const getStatusColor = (status) => {
     if (!status) return 'status-pending';
@@ -159,7 +159,7 @@ export default function LoadPlanning() {
     if (lowerStatus === 'delivered') return 'status-completed';
     return 'status-pending';
   };
-
+ 
   const downloadTextFile = (content, fileName, mimeType) => {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -171,13 +171,13 @@ export default function LoadPlanning() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-
+ 
   const escapeCsv = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-
+ 
   const exportLoads = (format) => {
     const fileDate = new Date().toISOString().slice(0, 10);
     const headers = ['Load Code', 'Load ID', 'Weight (kg)', 'Volume (m3)', 'Status', 'Pickup', 'Delivery'];
-
+ 
     const rows = sortedLoads.map((load) => [
       load.loadCode || `LOAD-${load.loadID}`,
       load.loadID || '',
@@ -187,25 +187,25 @@ export default function LoadPlanning() {
       load.plannedStart ? new Date(load.plannedStart).toLocaleDateString() : '-',
       load.plannedEnd ? new Date(load.plannedEnd).toLocaleDateString() : '-',
     ]);
-
+ 
     if (format === 'excel') {
       const tsv = [
         headers.join('\t'),
         ...rows.map((row) => row.map((cell) => String(cell ?? '').replace(/\t/g, ' ')).join('\t')),
       ].join('\n');
-
+ 
       downloadTextFile(`\ufeff${tsv}`, `loads-${fileDate}.xls`, 'application/vnd.ms-excel;charset=utf-8;');
       return;
     }
-
+ 
     const csv = [
       headers.map(escapeCsv).join(','),
       ...rows.map((row) => row.map(escapeCsv).join(',')),
     ].join('\n');
-
+ 
     downloadTextFile(`\ufeff${csv}`, `loads-${fileDate}.csv`, 'text/csv;charset=utf-8;');
   };
-
+ 
   if (loading) {
     return (
       <Layout>
@@ -215,7 +215,7 @@ export default function LoadPlanning() {
       </Layout>
     );
   }
-
+ 
   return (
     <Layout>
       <div className="routing-container">
@@ -235,7 +235,7 @@ export default function LoadPlanning() {
             </button>
           </div>
         </div>
-
+ 
         {/* STATISTICS CARDS */}
         <div className="stats-grid">
           <div className="stat-card">
@@ -263,14 +263,14 @@ export default function LoadPlanning() {
             </div>
           </div>
         </div>
-
+ 
         {/* ERROR MESSAGE */}
         {error && (
           <div className="alert alert-error">
             <span>⚠</span> {error}
           </div>
         )}
-
+ 
         <div className="routing-table-section">
           {/* FILTERS */}
           <div className="filters-section">
@@ -293,7 +293,7 @@ export default function LoadPlanning() {
                 <option value="in_transit">In Transit</option>
                 <option value="delivered">Delivered</option>
               </select>
-
+ 
               <details className="export-menu">
                 <summary className="export-btn" aria-label="Export loads table">
                   Export
@@ -306,7 +306,7 @@ export default function LoadPlanning() {
               </details>
             </div>
           </div>
-
+ 
           {/* LOADS TABLE */}
           <div className="table-container">
             <table className="routes-table">
@@ -370,7 +370,7 @@ export default function LoadPlanning() {
               </tbody>
             </table>
           </div>
-
+ 
           {filteredLoads.length > 0 && (
             <div className="pagination-container">
               <div className="pagination-info">
@@ -385,7 +385,7 @@ export default function LoadPlanning() {
                 >
                   Prev
                 </button>
-
+ 
                 {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
                   <button
                     key={page}
@@ -396,7 +396,7 @@ export default function LoadPlanning() {
                     {page}
                   </button>
                 ))}
-
+ 
                 <button
                   type="button"
                   className="page-btn"
@@ -413,3 +413,5 @@ export default function LoadPlanning() {
     </Layout>
   );
 }
+ 
+ 

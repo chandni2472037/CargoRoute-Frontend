@@ -9,6 +9,37 @@
   min-height: 100vh;
 }
 
+
+/* ───────── Vehicle Detail – shared detail page styles ───────── */
+
+.detail-page .detail-header {
+  margin-bottom: 16px;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.detail-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.text-muted {
+  color: #6b7280;
+}
+
+/* Buttons alignment */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
 .layout-content:has(.vehicle-detail-page) {
   overflow-y: auto;
 }

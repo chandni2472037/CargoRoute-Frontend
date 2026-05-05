@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8089';
+const BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8080';
 
 // ── Exceptions ──────────────────────────────────────────────────────────────
 

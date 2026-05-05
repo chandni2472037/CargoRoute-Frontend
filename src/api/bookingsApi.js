@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // All requests routed through API Gateway on port 8084
-const BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8089';
+const BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8080';
 
 /** GET /cargoRoute/booking/getBookings */
 export const getAllBookings = () =>

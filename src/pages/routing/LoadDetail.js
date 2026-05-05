@@ -6,8 +6,8 @@ import { getVehicleById, getVehicleAvailability } from '../../api/fleetApi';
 import { FiTrash2, FiEdit2 } from 'react-icons/fi';
 import ConfirmModal from '../../components/ConfirmModal';
 import '../../styles/Fleet.css';
-import '../styles/Routing.css';
-
+import '../../styles/Routing.css';
+ 
 export default function LoadDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,13 +20,13 @@ export default function LoadDetail() {
   const [vehicle, setVehicle] = useState(null);
   const [vehicleAvailabilities, setVehicleAvailabilities] = useState([]);
   const [vehicleLoading, setVehicleLoading] = useState(false);
-
+ 
   const fetchLoad = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const raw = await getLoadById(id);
-      const data = raw?.loadDto ? raw.loadDto : raw;
+      const data = raw?.load ? raw.load : raw;
       const normalized = {
         id: data.loadID,
         loadCode: data.loadCode || '-',
@@ -47,24 +47,24 @@ export default function LoadDetail() {
       setLoading(false);
     }
   }, [id]);
-
+ 
   useEffect(() => {
     fetchLoad();
   }, [fetchLoad]);
-
+ 
   useEffect(() => {
     const vehicleId = load?.vehicleId;
     const numericVehicleId = Number(vehicleId);
-
+ 
     if (!vehicleId || vehicleId === '-' || !Number.isFinite(numericVehicleId) || numericVehicleId <= 0) {
       setVehicle(null);
       setVehicleAvailabilities([]);
       setVehicleLoading(false);
       return;
     }
-
+ 
     let cancelled = false;
-
+ 
     const fetchVehicle = async () => {
       setVehicleLoading(true);
       try {
@@ -72,10 +72,10 @@ export default function LoadDetail() {
           getVehicleById(numericVehicleId),
           getVehicleAvailability(numericVehicleId).catch(() => []),
         ]);
-
+ 
         const embeddedAvailabilities = Array.isArray(vehicleData?.availabilities) ? vehicleData.availabilities : [];
         const apiAvailabilities = Array.isArray(availabilityData) ? availabilityData : [];
-
+ 
         if (!cancelled) {
           setVehicle(vehicleData || null);
           setVehicleAvailabilities(apiAvailabilities.length > 0 ? apiAvailabilities : embeddedAvailabilities);
@@ -92,19 +92,19 @@ export default function LoadDetail() {
         }
       }
     };
-
+ 
     fetchVehicle();
-
+ 
     return () => {
       cancelled = true;
     };
   }, [load?.vehicleId]);
-
+ 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
+ 
   const doSave = async () => {
     try {
       const totalWeightKg =
@@ -115,7 +115,7 @@ export default function LoadDetail() {
         formData.totalVolumeM3 === '' || formData.totalVolumeM3 === null || formData.totalVolumeM3 === undefined
           ? Number(load.totalVolumeM3 || 0)
           : Number(formData.totalVolumeM3);
-
+ 
       const payload = {
         loadID: load.id,
         loadCode: formData.loadCode || load.loadCode || '',
@@ -137,12 +137,12 @@ export default function LoadDetail() {
       console.error(err);
     }
   };
-
+ 
   const handleSubmit = (e) => {
     e?.preventDefault();
     setConfirmModal({ open: true, type: 'edit', title: 'Confirm Save', message: 'Do you want to save changes to this load?', onConfirm: doSave });
   };
-
+ 
   const handleDelete = async () => {
     if (!load?.id) return;
     try {
@@ -153,14 +153,14 @@ export default function LoadDetail() {
       console.error(err);
     }
   };
-
+ 
   const getStatusClass = (status) => {
     const s = (status || '').toLowerCase();
     if (s === 'delivered') return 'status-available';
     if (s === 'planned' || s === 'in_transit') return 'status-maintenance';
     return 'status-inuse';
   };
-
+ 
   const getAvailabilityStatusClass = (status) => {
     const upper = (status || '').toUpperCase();
     if (['AVAILABLE', 'OPEN', 'CONFIRMED', 'ACTIVE'].includes(upper)) return 'avail-status-positive';
@@ -168,7 +168,7 @@ export default function LoadDetail() {
     if (['MAINTENANCE', 'PENDING', 'ON_HOLD'].includes(upper)) return 'avail-status-warning';
     return 'avail-status-neutral';
   };
-
+ 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Not specified';
     return new Date(dateStr).toLocaleString('en-US', {
@@ -176,43 +176,43 @@ export default function LoadDetail() {
       hour: '2-digit', minute: '2-digit',
     });
   };
-
+ 
   const parseBookingsJSON = (bookingsJSON) => {
     if (!bookingsJSON) {
       return { items: [] };
     }
-
+ 
     const rawText = typeof bookingsJSON === 'string'
       ? bookingsJSON
       : JSON.stringify(bookingsJSON);
-
+ 
     try {
       const parsed = typeof bookingsJSON === 'string'
         ? JSON.parse(bookingsJSON)
         : bookingsJSON;
-
+ 
       if (Array.isArray(parsed)) {
         return { items: parsed };
       }
-
+ 
       if (parsed && Array.isArray(parsed.items)) {
         return { items: parsed.items };
       }
-
+ 
       if (parsed && Array.isArray(parsed.bookings)) {
         return { items: parsed.bookings };
       }
-
+ 
       if (parsed?.data && Array.isArray(parsed.data.items)) {
         return { items: parsed.data.items };
       }
-
+ 
       if (parsed && Array.isArray(parsed.bookingIds)) {
         return {
           items: parsed.bookingIds.map((id) => ({ bookingID: id })),
         };
       }
-
+ 
       if (parsed && typeof parsed === 'object') {
         return { items: [parsed] };
       }
@@ -222,15 +222,15 @@ export default function LoadDetail() {
         .split(',')
         .map((x) => x.trim())
         .filter(Boolean);
-
+ 
       return {
         items: simpleList.length > 0 ? simpleList : [rawText],
       };
     }
-
+ 
     return { items: [rawText] };
   };
-
+ 
   const BOOKING_COLUMNS = [
     { key: 'bookingID', label: 'Booking ID', aliases: ['bookingID', 'bookingId', 'id'] },
     { key: 'shipperID', label: 'Shipper ID', aliases: ['shipperID', 'shipperId'] },
@@ -247,7 +247,7 @@ export default function LoadDetail() {
     { key: 'specialHandlingFlags', label: 'Special Handling Flags', aliases: ['specialHandlingFlags'] },
     { key: 'status', label: 'Status', aliases: ['status'] },
   ];
-
+ 
   const getBookingColumnValue = (item, aliases = []) => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return '-';
     for (const alias of aliases) {
@@ -257,61 +257,61 @@ export default function LoadDetail() {
     }
     return '-';
   };
-
+ 
   const toLabel = (key) => {
     return String(key)
       .replace(/([a-z])([A-Z])/g, '$1 $2')
       .replace(/_/g, ' ')
       .replace(/^./, (ch) => ch.toUpperCase());
   };
-
+ 
   const formatBookingValue = (value) => {
     if (value === null || value === undefined || value === '') return '-';
-
+ 
     if (Array.isArray(value)) {
       if (value.length === 0) return '[]';
       const allPrimitive = value.every((v) => v === null || ['string', 'number', 'boolean'].includes(typeof v));
       return allPrimitive ? value.join(', ') : `${value.length} item(s)`;
     }
-
+ 
     if (typeof value === 'object') {
       const keys = Object.keys(value);
       return keys.length ? `{ ${keys.slice(0, 3).join(', ')}${keys.length > 3 ? ', ...' : ''} }` : '{}';
     }
-
+ 
     return String(value);
   };
-
+ 
   const getBookingSummary = (item) => {
     if (!item || typeof item !== 'object') return '';
-
+ 
     const keys = Object.keys(item);
     if (keys.length === 1 && ['bookings', 'booking', 'items'].includes(keys[0])) {
       return '';
     }
-
+ 
     const entries = Object.entries(item)
       .filter(([key]) => !['id', 'bookingId'].includes(key))
       .slice(0, 4)
       .map(([key, value]) => `${toLabel(key)}: ${formatBookingValue(value)}`);
-
+ 
     if (entries.length === 0) return '';
-
+ 
     const summary = entries.join(' • ');
     if (/^Bookings?:\s*\d+\s*item\(s\)$/i.test(summary)) {
       return '';
     }
-
+ 
     return summary;
   };
-
+ 
   const getBookingColumns = (items) => {
     const objectItems = items.filter((item) => item && typeof item === 'object' && !Array.isArray(item));
     if (objectItems.length === 0) return [];
-
+ 
     const preferred = ['bookingId', 'id', 'customer', 'customerName', 'pickup', 'dropoff', 'status', 'weight', 'volume'];
     const keySet = new Set();
-
+ 
     objectItems.forEach((item) => {
       Object.keys(item).forEach((key) => {
         if (!['bookings', 'items'].includes(key)) {
@@ -319,16 +319,16 @@ export default function LoadDetail() {
         }
       });
     });
-
+ 
     const allKeys = Array.from(keySet);
     const ordered = [
       ...preferred.filter((key) => allKeys.includes(key)),
       ...allKeys.filter((key) => !preferred.includes(key)),
     ];
-
+ 
     return ordered.slice(0, 6);
   };
-
+ 
   const bookingsData = parseBookingsJSON(load?.bookingsJSON);
   if (loading) {
     return (
@@ -339,7 +339,7 @@ export default function LoadDetail() {
       </Layout>
     );
   }
-
+ 
   if (!load) {
     return (
       <Layout>
@@ -352,7 +352,7 @@ export default function LoadDetail() {
       </Layout>
     );
   }
-
+ 
   return (
     <Layout>
       <div className="fleet-container load-detail-page">
@@ -392,13 +392,13 @@ export default function LoadDetail() {
             </button>
           </div>
         </div>
-
+ 
         {error && (
           <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
             <span>⚠</span> {error}
           </div>
         )}
-
+ 
         {/* VIEW MODE */}
         {!isEditing ? (
           <div className="detail-cards">
@@ -423,7 +423,7 @@ export default function LoadDetail() {
                 </span>
               </div>
             </div>
-
+ 
             <div className="detail-card capacity-card">
               <h3>Capacity</h3>
               <div className="detail-row">
@@ -435,7 +435,7 @@ export default function LoadDetail() {
                 <span className="value">{load.totalVolumeM3 ? load.totalVolumeM3 + ' m3' : '-'}</span>
               </div>
             </div>
-
+ 
             <div className="detail-card assignment-card">
               <h3>Vehicle & Driver</h3>
               <div className="detail-row">
@@ -459,7 +459,7 @@ export default function LoadDetail() {
                 <span className="value">{vehicleLoading ? 'Loading...' : (vehicle?.driverID || 'None')}</span>
               </div>
             </div>
-
+ 
             <div className="detail-card availability-card">
               <h3>Vehicle Availability</h3>
               {vehicleLoading ? (
@@ -497,7 +497,7 @@ export default function LoadDetail() {
                 <p className="booking-detail">No availability records found for this vehicle.</p>
               )}
             </div>
-
+ 
             <div className="detail-card maintenance-card">
               <h3>Schedule</h3>
               <div className="detail-row">
@@ -509,7 +509,7 @@ export default function LoadDetail() {
                 <span className="value">{formatDate(load.plannedEnd)}</span>
               </div>
             </div>
-
+ 
             {load.bookingsJSON && (
               <div className="detail-card bookings-card">
                 <h3>Bookings</h3>
@@ -528,7 +528,7 @@ export default function LoadDetail() {
                           const row = item && typeof item === 'object' && !Array.isArray(item)
                             ? item
                             : { bookingID: item };
-
+ 
                           return (
                             <tr key={`booking-row-${index}`}>
                               {BOOKING_COLUMNS.map((column) => (
@@ -609,3 +609,5 @@ export default function LoadDetail() {
     </Layout>
   );
 }
+ 
+ 

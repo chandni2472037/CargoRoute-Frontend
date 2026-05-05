@@ -13,66 +13,103 @@ const NAV_ITEMS = [
     label: 'Bookings',
     icon: '📦',
     path: '/bookings',
-      children: [
-        { label: 'All Bookings', path: '/bookings' },
-        { label: 'New Booking',  path: '/bookings/new' },
-      ],
+    roles: ['Admin', 'Dispatcher', 'Shipper', 'Analyst', 'FleetManager', 'WarehouseManager', 'BillingClerk'],
+    children: [
+      { label: 'All Bookings', path: '/bookings', roles: ['Admin', 'Dispatcher', 'Shipper', 'Analyst', 'FleetManager', 'WarehouseManager', 'BillingClerk'] },
+      { label: 'New Booking', path: '/bookings/new', roles: ['Admin', 'Shipper'] },
+    ],
   },
-    {
-      label: 'Shippers',
-      icon: '👥',
-      path: '/shippers',
-      children: [
-        { label: 'All Shippers', path: '/shippers' },
-        { label: 'Add Shipper',  path: '/shippers/new' },
-      ],
-    },
- 
+  {
+    label: 'Shippers',
+    icon: '👥',
+    path: '/shippers',
+    roles: ['Admin', 'Dispatcher', 'Analyst'],
+    children: [
+      { label: 'All Shippers', path: '/shippers', roles: ['Admin', 'Dispatcher', 'Analyst'] },
+      { label: 'Add Shipper', path: '/shippers/new', roles: ['Admin'] },
+    ],
+  },
   {
     label: 'Fleet Management',
     icon: '🚚',
     path: '/fleet/vehicles',
+    roles: ['Admin', 'Dispatcher', 'FleetManager'],
     children: [
-      { label: 'Fleet Registry', path: '/fleet/vehicles' },
-      { label: 'Add Vehicle',    path: '/fleet/vehicles/new' },
+      { label: 'Fleet Registry', path: '/fleet/vehicles', roles: ['Admin', 'Dispatcher', 'FleetManager'] },
+      { label: 'Add Vehicle', path: '/fleet/vehicles/new', roles: ['Admin', 'Dispatcher', 'FleetManager'] },
     ],
   },
-
   {
     label: 'Route Optimization',
     icon: '🗺️',
     path: '/routing/routes',
+    roles: ['Admin', 'Dispatcher', 'FleetManager'],
     children: [
-      { label: 'Route Optimization', path: '/routing/routes' },
-      { label: 'Load Planning', path: '/routing/load-planning' },
-      { label: 'Routing Rules', path: '/routing/rules' },
+      { label: 'Route Optimization', path: '/routing/routes', roles: ['Admin', 'Dispatcher', 'FleetManager'] },
+      { label: 'Load Planning', path: '/routing/load-planning', roles: ['Admin', 'Dispatcher', 'FleetManager'] },
+      { label: 'Routing Rules', path: '/routing/rules', roles: ['Admin', 'Dispatcher', 'FleetManager'] },
+    ],
+  },
+  {
+    label: 'Dispatch',
+    icon: '📤',
+    path: '/dispatch',
+    roles: ['Admin', 'Dispatcher', 'FleetManager', 'Driver'],
+    children: [
+      { label: 'All Dispatches', path: '/dispatch', roles: ['Admin', 'Dispatcher', 'FleetManager'] },
+      { label: 'New Dispatch', path: '/dispatch/new', roles: ['Admin', 'Dispatcher', 'FleetManager'] },
+      { label: 'Drivers', path: '/drivers', roles: ['Admin', 'Dispatcher', 'FleetManager'] },
+      { label: 'Driver Acknowledgements', path: '/driver-ack', roles: ['Admin', 'Dispatcher', 'FleetManager', 'Driver'] },
     ],
   },
   {
     label: 'Manifests & POD',
     icon: '📄',
     path: '/manifests',
+    roles: ['Admin', 'Dispatcher', 'WarehouseManager', 'Analyst', 'BillingClerk'],
     children: [
-      { label: 'All Manifests', path: '/manifests' },
-      { label: 'New Manifest', path: '/manifests/new' },
-      { label: 'Proof of Delivery', path: '/pod' },
+      { label: 'All Manifests', path: '/manifests', roles: ['Admin', 'Dispatcher', 'WarehouseManager', 'Analyst', 'BillingClerk'] },
+      { label: 'New Manifest', path: '/manifests/new', roles: ['Admin', 'Dispatcher', 'WarehouseManager'] },
+      { label: 'Proof of Delivery', path: '/pod', roles: ['Admin', 'Dispatcher', 'WarehouseManager', 'Analyst', 'BillingClerk', 'Driver'] },
+      { label: 'Handovers', path: '/handovers', roles: ['Admin', 'Dispatcher', 'WarehouseManager', 'Analyst', 'BillingClerk'] },
     ],
   },
   {
     label: 'Exceptions & Claims',
     icon: '⚠️',
     path: '/exceptions',
+    roles: ['Admin', 'Dispatcher', 'Shipper', 'FleetManager', 'WarehouseManager', 'BillingClerk', 'Analyst'],
     children: [
-      { label: 'All Exceptions', path: '/exceptions' },
-      { label: 'Report Exception', path: '/exceptions/new' },
-      { label: 'Claims', path: '/claims' },
-      { label: 'File Claim', path: '/claims/new' },
+      { label: 'All Exceptions', path: '/exceptions', roles: ['Admin', 'Dispatcher', 'Shipper', 'FleetManager', 'WarehouseManager', 'BillingClerk', 'Analyst'] },
+      { label: 'Report Exception', path: '/exceptions/new', roles: ['Shipper', 'Dispatcher'] },
+      { label: 'Claims', path: '/claims', roles: ['Admin', 'Dispatcher', 'Shipper', 'FleetManager', 'WarehouseManager', 'BillingClerk', 'Analyst'] },
+      { label: 'File Claim', path: '/claims/new', roles: ['Admin', 'Shipper'] },
     ],
   },
-  { label: 'Dispatch', icon: '📤', path: '/dispatch' },
-  { label: 'Driver Portal', icon: '👤', path: '/drivers' },
-  { label: 'User Management', icon: '👥', path: '/admin/users', adminOnly: true },
-  { label: 'Audit Logs', icon: '🧾', path: '/admin/audit-logs', adminOnly: true },
+  { label: 'User Management', icon: '👥', path: '/admin/users', roles: ['Admin'] },
+  { label: 'Audit Logs', icon: '🧾', path: '/admin/audit-logs', roles: ['Admin'] },
+  {
+    label: 'Billing',
+    icon: '💳',
+    path: '/billing',
+    roles: ['Admin', 'BillingClerk', 'Analyst'],
+    children: [
+      { label: 'Billing Panel', path: '/billing', roles: ['Admin', 'BillingClerk', 'Analyst'] },
+      { label: 'Invoices', path: '/billing/invoices', roles: ['Admin', 'BillingClerk', 'Analyst'] },
+      { label: 'Billing Lines', path: '/billing/billing-lines', roles: ['Admin', 'BillingClerk', 'Analyst'] },
+      { label: 'Tariffs', path: '/billing/tariffs', roles: ['Admin', 'BillingClerk', 'Analyst'] },
+    ],
+  },
+  {
+    label: 'Reports',
+    icon: '📊',
+    path: '/reports',
+    roles: ['Admin', 'Analyst'],
+    children: [
+      { label: 'Reports', path: '/reports', roles: ['Admin', 'Analyst'] },
+      { label: 'KPIs', path: '/kpis', roles: ['Admin', 'Analyst'] },
+    ],
+  },
 ];
   
 const DRIVER_ROLE = 'DRIVER';
@@ -199,10 +236,15 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS
-          .filter(item => !item.adminOnly || user?.role === "Admin")
-          .map((item) =>
-            item.children ? (
+          {NAV_ITEMS.filter((item) => {
+            const role = String(user?.role || '').trim();
+            const hasItemAccess = !item.roles || item.roles.includes(role);
+            const visibleChildren = item.children?.filter((child) => !child.roles || child.roles.includes(role)) || [];
+            return hasItemAccess || visibleChildren.length > 0;
+          }).map((item) => {
+            const role = String(user?.role || '').trim();
+            const visibleChildren = item.children?.filter((child) => !child.roles || child.roles.includes(role)) || [];
+            return item.children ? (
               <div key={item.path}>
                 <div
                   className={`nav-item ${isParentActive(item) ? 'nav-item-active' : ''}`}
@@ -218,7 +260,7 @@ export default function Layout({ children }) {
                 </div>
                 {expandedMenus[item.path] && (
                   <div className="nav-submenu">
-                    {item.children.map((child) => (
+                    {visibleChildren.map((child) => (
                       <Link
                         key={child.path}
                         to={child.path}
@@ -239,8 +281,8 @@ export default function Layout({ children }) {
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-label">{item.label}</span>
               </Link>
-            )
-          )}
+            );
+          })}
         </nav>
       </aside>
 

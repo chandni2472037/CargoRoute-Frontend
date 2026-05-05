@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8089/cargoRoute/auditLogs";
+const API_URL = "http://localhost:8080/cargoRoute/auditLogs";
 
 const authHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,

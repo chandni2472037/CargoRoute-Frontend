@@ -7,23 +7,23 @@ import { getVehicleById, getVehicleAvailability } from '../../api/fleetApi';
 import { FiTrash2, FiEdit2 } from 'react-icons/fi';
 import ConfirmModal from '../../components/ConfirmModal';
 import '../../styles/Fleet.css';
-import '../styles/Routing.css';
-
+import '../../styles/Routing.css';
+ 
 const createEmptyStop = () => ({
   stopID: '',
   location: '',
   eta: '',
   action: '',
 });
-
+ 
 const parseStopsFromSequenceJSON = (sequenceJSON) => {
   if (!sequenceJSON || !sequenceJSON.trim()) return [createEmptyStop()];
-
+ 
   try {
     const parsed = typeof sequenceJSON === 'string' ? JSON.parse(sequenceJSON) : sequenceJSON;
     const stops = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.stops) ? parsed.stops : []);
     if (stops.length === 0) return [createEmptyStop()];
-
+ 
     return stops.map((stop) => ({
       stopID: stop?.stopID ?? '',
       location: stop?.location ?? '',
@@ -34,7 +34,7 @@ const parseStopsFromSequenceJSON = (sequenceJSON) => {
     return [createEmptyStop()];
   }
 };
-
+ 
 export default function RouteDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -48,7 +48,7 @@ export default function RouteDetail() {
   const [vehicleAvailabilities, setVehicleAvailabilities] = useState([]);
   const [vehicleLoading, setVehicleLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ open: false });
-
+ 
   const fetchRoute = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -80,24 +80,24 @@ export default function RouteDetail() {
       setLoading(false);
     }
   }, [id]);
-
+ 
   useEffect(() => {
     fetchRoute();
   }, [fetchRoute]);
-
+ 
   useEffect(() => {
     const vehicleId = route?.vehicleId;
     const numericVehicleId = Number(vehicleId);
-
+ 
     if (!vehicleId || vehicleId === '-' || !Number.isFinite(numericVehicleId)) {
       setVehicle(null);
       setVehicleAvailabilities([]);
       setVehicleLoading(false);
       return;
     }
-
+ 
     let cancelled = false;
-
+ 
     const fetchVehicle = async () => {
       setVehicleLoading(true);
       try {
@@ -105,10 +105,10 @@ export default function RouteDetail() {
           getVehicleById(numericVehicleId),
           getVehicleAvailability(numericVehicleId).catch(() => []),
         ]);
-
+ 
         const embeddedAvailabilities = Array.isArray(vehicleData?.availabilities) ? vehicleData.availabilities : [];
         const apiAvailabilities = Array.isArray(availabilityData) ? availabilityData : [];
-
+ 
         if (!cancelled) {
           setVehicle(vehicleData || null);
           setVehicleAvailabilities(apiAvailabilities.length > 0 ? apiAvailabilities : embeddedAvailabilities);
@@ -125,36 +125,36 @@ export default function RouteDetail() {
         }
       }
     };
-
+ 
     fetchVehicle();
-
+ 
     return () => {
       cancelled = true;
     };
   }, [route?.vehicleId]);
-
+ 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
+ 
   const handleStopChange = (index, field, value) => {
     setSequenceStops((prev) =>
       prev.map((stop, i) => (i === index ? { ...stop, [field]: value } : stop))
     );
   };
-
+ 
   const addStopRow = () => {
     setSequenceStops((prev) => [...prev, createEmptyStop()]);
   };
-
+ 
   const removeStopRow = (index) => {
     setSequenceStops((prev) => {
       const next = prev.filter((_, i) => i !== index);
       return next.length > 0 ? next : [createEmptyStop()];
     });
   };
-
+ 
   const doSubmit = async () => {
     try {
       const distanceKm =
@@ -169,7 +169,7 @@ export default function RouteDetail() {
         formData.costEstimate === '' || formData.costEstimate === null || formData.costEstimate === undefined
           ? Number(route.costEstimate || 0)
           : Number(formData.costEstimate);
-
+ 
       const normalizedStops = sequenceStops
         .filter((stop) => stop.stopID || stop.location || stop.eta || stop.action)
         .map((stop) => ({
@@ -178,7 +178,7 @@ export default function RouteDetail() {
           eta: stop.eta ? `${stop.eta}:00` : null,
           action: stop.action || null,
         }));
-
+ 
       const payload = {
         routeID: route.id,
         sequenceJSON: normalizedStops.length > 0 ? JSON.stringify({ stops: normalizedStops }) : '',
@@ -197,12 +197,12 @@ export default function RouteDetail() {
       console.error(err);
     }
   };
-
+ 
   const handleSubmit = (e) => {
     e?.preventDefault();
     setConfirmModal({ open: true, type: 'edit', title: 'Confirm Save', message: 'Do you want to save changes to this route?', onConfirm: doSubmit });
   };
-
+ 
   const handleDelete = async () => {
     if (!route?.id) return;
     try {
@@ -213,7 +213,7 @@ export default function RouteDetail() {
       console.error(err);
     }
   };
-
+ 
   const getStatusClass = (status) => {
     const s = (status || '').toLowerCase();
     if (s === 'in_progress' || s === 'in progress') return 'status-available';
@@ -221,7 +221,7 @@ export default function RouteDetail() {
     if (s === 'planned') return 'status-maintenance';
     return 'status-inuse';
   };
-
+ 
   const getAvailabilityStatusClass = (status) => {
     const upper = (status || '').toUpperCase();
     if (['AVAILABLE', 'OPEN', 'CONFIRMED', 'ACTIVE'].includes(upper)) return 'avail-status-positive';
@@ -229,7 +229,7 @@ export default function RouteDetail() {
     if (['MAINTENANCE', 'PENDING', 'ON_HOLD'].includes(upper)) return 'avail-status-warning';
     return 'avail-status-neutral';
   };
-
+ 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Not specified';
     return new Date(dateStr).toLocaleString('en-US', {
@@ -237,7 +237,7 @@ export default function RouteDetail() {
       hour: '2-digit', minute: '2-digit',
     });
   };
-
+ 
   const parseStops = (sequenceJSON) => {
     if (!sequenceJSON) return [];
     try {
@@ -250,13 +250,13 @@ export default function RouteDetail() {
       return [];
     }
   };
-
+ 
   const scheduleData = {
     plannedStart: route?.plannedStart,
     plannedEnd: route?.plannedEnd,
     stops: parseStops(route?.sequenceJSON),
   };
-
+ 
   if (loading) {
     return (
       <Layout>
@@ -266,7 +266,7 @@ export default function RouteDetail() {
       </Layout>
     );
   }
-
+ 
   if (error && !route) {
     return (
       <Layout>
@@ -279,7 +279,7 @@ export default function RouteDetail() {
       </Layout>
     );
   }
-
+ 
   if (!route) {
     return (
       <Layout>
@@ -292,7 +292,7 @@ export default function RouteDetail() {
       </Layout>
     );
   }
-
+ 
   return (
     <Layout>
       <div className="fleet-container route-detail-page">
@@ -331,13 +331,13 @@ export default function RouteDetail() {
             </button>
           </div>
         </div>
-
+ 
         {error && (
           <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
             <span>⚠</span> {error}
           </div>
         )}
-
+ 
         {/* VIEW MODE */}
         {!isEditing ? (
           <div className="detail-cards">
@@ -362,7 +362,7 @@ export default function RouteDetail() {
                 </span>
               </div>
             </div>
-
+ 
             <div className="detail-card capacity-card">
               <h3>Route Metrics</h3>
               <div className="detail-row">
@@ -378,7 +378,7 @@ export default function RouteDetail() {
                 <span className="value">Rs. {route.costEstimate ? Number(route.costEstimate).toFixed(2) : '-'}</span>
               </div>
             </div>
-
+ 
             <div className="detail-card assignment-card">
               <h3>Load Details</h3>
               <div className="detail-row">
@@ -394,7 +394,7 @@ export default function RouteDetail() {
                 <span className="value">{route.totalVolumeM3 ? route.totalVolumeM3 + ' m3' : '-'}</span>
               </div>
             </div>
-
+ 
             <div className="detail-card assignment-card">
               <h3>Vehicle & Driver</h3>
               <div className="detail-row">
@@ -414,11 +414,15 @@ export default function RouteDetail() {
                 <span className="value">{vehicleLoading ? 'Loading...' : (vehicle?.driver?.name || 'Unassigned')}</span>
               </div>
               <div className="detail-row">
-                <span className="label">Driver ID:</span>
-                <span className="value">{vehicleLoading ? 'Loading...' : (vehicle?.driverID || 'None')}</span>
+                <span className="label">LicenseNo</span>
+                <span className="value">{vehicleLoading ? 'Loading...' : (vehicle?.driver.licenseNo || 'None')}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Contact</span>
+                <span className="value">{vehicleLoading ? 'Loading...' : (vehicle?.driver.contactInfo  || 'None')}</span>
               </div>
             </div>
-
+ 
             <div className="detail-card availability-card">
               <h3>Vehicle Availability</h3>
               {vehicleLoading ? (
@@ -456,7 +460,7 @@ export default function RouteDetail() {
                 <p className="booking-detail">No availability records found for this vehicle.</p>
               )}
             </div>
-
+ 
             <div className="detail-card maintenance-card">
               <h3>Schedule</h3>
               <ScheduleCard schedule={scheduleData} />
@@ -589,3 +593,5 @@ export default function RouteDetail() {
     </Layout>
   );
 }
+ 
+ 

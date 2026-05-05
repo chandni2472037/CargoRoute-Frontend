@@ -6,6 +6,7 @@ import { getAllShippers, createShipper, updateShipper } from '../../api/bookings
 import { SHIPPER_STATUS_CONFIG as STATUS_CONFIG } from '../../utils/constants';
 import { exportCSV } from '../../utils/csvExport';
 import '../../styles/Bookings.css';
+import Pagination from '../../components/Pagination';
 
 const EMPTY_FORM = { name: '', contactInfo: '', accountTerms: '', status: 'ACTIVE' };
 // status is always ACTIVE on creation; not shown in form
@@ -30,6 +31,9 @@ export default function ShippersList() {
   const [message, setMessage]       = useState({ type: '', text: '' });
   const [search, setSearch]         = useState('');
 
+  const [currentPage, setCurrentPage] = useState(1);
+const PAGE_SIZE = 6;
+
   const loadShippers = () => {
     setLoading(true);
     getAllShippers()
@@ -37,6 +41,11 @@ export default function ShippersList() {
       .catch(() => setError('Could not load shippers. Is the API Gateway running on port 8089?'))
       .finally(() => setLoading(false));
   };
+
+  useEffect(() => {
+  setCurrentPage(1);
+}, [search]);
+
 
   useEffect(loadShippers, []);
 
@@ -112,6 +121,13 @@ export default function ShippersList() {
     s.name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+const paginated = filtered.slice(
+  (currentPage - 1) * PAGE_SIZE,
+  currentPage * PAGE_SIZE
+);
+
+
   return (
     <Layout>
       <div className="bookings-page">
@@ -125,13 +141,14 @@ export default function ShippersList() {
           </div>
           {user?.role === 'Admin' && (
             <button
-              className="btn-primary"
-              title="Add Shipper"
-              onClick={openAddForm}
-              style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}
-            >
-              +
-            </button>
+  className="btn-primary expand-btn"
+  title="Add Shipper"
+  onClick={openAddForm}
+>
+  <span className="expand-btn-icon">+</span>
+  <span className="expand-btn-label">New Shipper</span>
+</button>
+
           )}
         </div>
 
@@ -291,7 +308,7 @@ export default function ShippersList() {
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((s) => {
+                    paginated.map((s) => {
                       const sc = STATUS_CONFIG[s.status] || { label: s.status, cls: 'status-pending' };
                       return (
                         <tr key={s.shipperID} className="table-row">
@@ -324,10 +341,21 @@ export default function ShippersList() {
                       );
                     })
                   )}
+
+                  
                 </tbody>
               </table>
             </div>
           )}
+
+
+          {!loading && totalPages > 1 && (
+  <Pagination
+    currentPage={currentPage}
+    totalPages={totalPages}
+    onPageChange={setCurrentPage}
+  />
+)}
         </div>
 
       </div>

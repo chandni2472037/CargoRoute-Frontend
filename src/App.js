@@ -53,6 +53,50 @@ import TaskDetailPage from "./pages/tasks/TaskDetailPage";
 
 
 
+// Dispatch module
+import DispatchList   from "./pages/dispatch/DispatchList";
+import NewDispatch    from "./pages/dispatch/NewDispatch";
+import DispatchDetail from "./pages/dispatch/DispatchDetail";
+import DriversList    from "./pages/dispatch/DriversList";
+import DriverAckList  from "./pages/dispatch/DriverAckList";
+
+// Manifests & POD module
+import ManifestList   from "./pages/manifests/ManifestList";
+import NewManifest    from "./pages/manifests/NewManifest";
+import ManifestDetail from "./pages/manifests/ManifestDetail";
+import PodList        from "./pages/manifests/PodList";
+import PodDetail      from "./pages/manifests/PodDetail";
+import HandoverList   from "./pages/manifests/HandoverList";
+
+
+// Billing & Reconciliation module
+import BillingPanel    from "./pages/billing/BillingPanel";
+import InvoicesList    from "./pages/billing/InvoicesList";
+import InvoiceCreate   from "./pages/billing/InvoiceCreate";
+import InvoiceDetail   from "./pages/billing/InvoiceDetail";
+import BillingLinesList from "./pages/billing/BillingLinesList";
+import BillingLineCreate from "./pages/billing/BillingLineCreate";
+import BillingLinesImport from './pages/billing/BillingLinesImport';
+import BillingLinesExport from './pages/billing/BillingLinesExport';
+import TariffsList     from "./pages/billing/TariffsList";
+import TariffCreate    from "./pages/billing/TariffCreate";
+import BillingLineView from "./pages/billing/BillingLineView";
+import BillingLineEdit from "./pages/billing/BillingLineEdit";
+import TariffView from './pages/billing/TariffView';
+import TariffEdit from './pages/billing/TariffEdit';
+
+// KPI Reports module
+import ReportsPanel    from "./pages/reports/ReportsPanel";
+import ReportViewPage from "./pages/reports/ReportViewPage";
+import ReportCreatePage from "./pages/reports/ReportCreatePage";
+import ReportEditPage from "./pages/reports/ReportEditPage";
+import KpiPanel       from "./pages/reports/KpiPanel";
+import KpiCreatePage from "./pages/reports/KpiCreatePage";
+import KpiDetailPage  from "./pages/reports/KpiDetailPage";
+import KpiEditPage    from "./pages/reports/KpiEditPage";
+
+
+
 const BOOKING_ROLES_VIEW   = ["Admin", "Dispatcher", "Shipper", "Analyst", "FleetManager", "WarehouseManager", "BillingClerk"];
 // Roles allowed to create new bookings
 // Backend permits Admin and Shipper to create bookings; Dispatcher must not create.
@@ -66,6 +110,11 @@ const EXCEPTION_CREATE_ROLES = ["Shipper", "Dispatcher"];
 const CLAIM_CREATE_ROLES = ["Admin", "Shipper"];
 
 
+const BILLING_ROLES   = ["Admin", "BillingClerk", "Analyst"];
+const REPORT_ROLES    = ["Admin", "Analyst"];
+
+
+
 
 
 // Roles allowed to access the bookings module
@@ -76,6 +125,13 @@ const FLEET_ROLES = ["Admin", "Dispatcher", "FleetManager"];
 
 // Roles allowed to access the routing module
 const ROUTING_ROLES = ["Admin", "Dispatcher"];
+
+
+// Roles allowed to access the dispatch module
+const DISPATCH_ROLES   = ["Admin", "Dispatcher", "FleetManager"];
+
+// Roles allowed to access the manifests & POD module
+const MANIFEST_ROLES   = ["Admin", "Dispatcher", "WarehouseManager", "Analyst"];
 
 export default function App() {
   return (
@@ -88,7 +144,7 @@ export default function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* ── Dashboard ── */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           {/* ── Booking & Order Intake ── */}
@@ -135,6 +191,274 @@ export default function App() {
           <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
           <Route path="/tasks/new" element={<ProtectedRoute><NewTaskPage /></ProtectedRoute>} />
           <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetailPage /></ProtectedRoute>} />
+
+
+          {/* ── Dispatch & Drivers ── */}
+          <Route
+            path="/dispatch"
+            element={
+              <ProtectedRoute roles={DISPATCH_ROLES}>
+                <DispatchList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dispatch/new"
+            element={
+              <ProtectedRoute roles={DISPATCH_ROLES}>
+                <NewDispatch />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dispatch/:id"
+            element={
+              <ProtectedRoute roles={DISPATCH_ROLES}>
+                <DispatchDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/drivers"
+            element={
+              <ProtectedRoute roles={DISPATCH_ROLES}>
+                <DriversList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/driver-ack"
+            element={
+              <ProtectedRoute roles={[...DISPATCH_ROLES, 'Driver']}>
+                <DriverAckList />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── Manifests & POD ── */}
+          <Route
+            path="/manifests"
+            element={
+              <ProtectedRoute roles={MANIFEST_ROLES}>
+                <ManifestList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manifests/new"
+            element={
+              <ProtectedRoute roles={MANIFEST_ROLES}>
+                <NewManifest />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manifests/:id"
+            element={
+              <ProtectedRoute roles={MANIFEST_ROLES}>
+                <ManifestDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pod"
+            element={
+              <ProtectedRoute roles={MANIFEST_ROLES}>
+                <PodList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pod/:id"
+            element={
+              <ProtectedRoute roles={MANIFEST_ROLES}>
+                <PodDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/handovers"
+            element={
+              <ProtectedRoute roles={MANIFEST_ROLES}>
+                <HandoverList />
+              </ProtectedRoute>
+            }
+          />
+
+
+
+          {/* ── Billing & Reconciliation ── */}
+          <Route
+            path="/billing"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingPanel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/invoices"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <InvoicesList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/invoices/create"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <InvoiceCreate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/invoices/:id"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <InvoiceDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/billing-lines"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLinesList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/billing-lines/create"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLineCreate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/billing-lines/import"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLinesImport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/billing-lines/export"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLinesExport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/billing-lines/view/:id"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLineView />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/billing-lines/edit/:id"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <BillingLineEdit />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/tariffs"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <TariffsList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/tariffs/create"
+            element={
+              <ProtectedRoute roles={BILLING_ROLES}>
+                <TariffCreate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing/tariffs/view/:id"
+            element={<TariffView />}
+          />
+          <Route
+            path="/billing/tariffs/edit/:id"
+            element={<TariffEdit />}
+          />
+
+
+          {/* -- KPI Reports -- */}
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <ReportsPanel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/create"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <ReportCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/:id/edit"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <ReportEditPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/:id"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <ReportViewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kpis"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <KpiPanel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kpis/create"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <KpiCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kpis/:id"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <KpiDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kpis/edit/:id"
+            element={
+              <ProtectedRoute roles={REPORT_ROLES}>
+                <KpiEditPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ── Admin Only ── */}
           <Route path="/admin/users" element={<ProtectedRoute role="Admin"><UsersPage /></ProtectedRoute>} />

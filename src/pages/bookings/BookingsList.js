@@ -134,7 +134,7 @@ export default function BookingsList() {
 
   return (
     <Layout>
-      <div className="bookings-page">
+      <div className="bookings-page bookings-list-page">
 
         {/* ── Page header ─────────────────────────────────────── */}
         <div className="page-header">
@@ -146,9 +146,14 @@ export default function BookingsList() {
             <p className="page-subtitle">Manage all freight bookings and orders</p>
           </div>
           {ALLOWED_CREATE_ROLES.includes(user?.role) && (
-            <button className="btn-primary" title="New Booking" onClick={() => navigate('/bookings/new')} style={{ fontSize: 22, lineHeight: 1, padding: '6px 16px' }}>
-              +
-            </button>
+            <button
+  className="btn-primary expand-btn"
+  title="New Booking"
+  onClick={() => navigate('/bookings/new')}
+>
+  <span className="expand-btn-icon">+</span>
+  <span className="expand-btn-label">New Booking</span>
+</button>
           )}
         </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import BackButton from '../../components/BackButton';
 import { getShipperById, updateShipper } from '../../api/bookingsApi';
 import { SHIPPER_STATUS_CONFIG } from '../../utils/constants';
 import '../../styles/Bookings.css';
@@ -92,7 +93,7 @@ export default function ShipperEdit() {
 
             <div className="form-actions-row" style={{ marginTop: 16 }}>
               <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
-              <button type="button" className="btn-secondary" onClick={() => navigate('/shippers')}>Cancel</button>
+              <BackButton to="/shippers" label="Back" />
             </div>
           </div>
         </form>

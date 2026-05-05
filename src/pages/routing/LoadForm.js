@@ -4,8 +4,8 @@ import Layout from '../../components/Layout';
 import { createLoad } from '../../api/routingApi';
 import { getAllVehicles } from '../../api/fleetApi';
 import '../../styles/Fleet.css';
-import '../styles/Routing.css';
-
+import '../../styles/Routing.css';
+ 
 export default function LoadForm() {
   const navigate = useNavigate();
   const createEmptyBooking = () => ({
@@ -24,7 +24,7 @@ export default function LoadForm() {
     specialHandlingFlags: '',
     status: 'PENDING',
   });
-
+ 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -40,7 +40,7 @@ export default function LoadForm() {
     status: 'PENDING',
     bookingItems: [createEmptyBooking()],
   });
-
+ 
   const fetchVehicles = useCallback(async () => {
     try {
       setVehiclesLoading(true);
@@ -53,11 +53,11 @@ export default function LoadForm() {
       setVehiclesLoading(false);
     }
   }, []);
-
+ 
   useEffect(() => {
     fetchVehicles();
   }, [fetchVehicles]);
-
+ 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -65,7 +65,7 @@ export default function LoadForm() {
       setFieldErrors((prev) => ({ ...prev, [name]: validators[name](value, { ...formData, [name]: value }) }));
     }
   };
-
+ 
   const handleBookingChange = (index, field, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -74,14 +74,14 @@ export default function LoadForm() {
       )),
     }));
   };
-
+ 
   const addBookingRow = () => {
     setFormData((prev) => ({
       ...prev,
       bookingItems: [...prev.bookingItems, createEmptyBooking()],
     }));
   };
-
+ 
   const removeBookingRow = (index) => {
     setFormData((prev) => {
       const nextItems = prev.bookingItems.filter((_, itemIndex) => itemIndex !== index);
@@ -91,7 +91,7 @@ export default function LoadForm() {
       };
     });
   };
-
+ 
   const isBookingRowBlank = (item) => {
     if (!item) return true;
     return Object.entries(item).every(([key, value]) => {
@@ -99,13 +99,13 @@ export default function LoadForm() {
       return value === '' || value === null || value === undefined;
     });
   };
-
+ 
   const toNumberOrNull = (value) => {
     if (value === '' || value === null || value === undefined) return null;
     const n = Number(value);
     return Number.isFinite(n) ? n : null;
   };
-
+ 
   const validators = {
     loadCode: (val) => {
       if (!val || !val.trim()) return 'Load code is required.';
@@ -132,26 +132,26 @@ export default function LoadForm() {
       return new Date(val) < new Date(data.plannedStart) ? 'Planned end cannot be before planned start.' : '';
     },
   };
-
+ 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+ 
     const errors = {};
     Object.keys(validators).forEach((field) => {
       const msg = validators[field](formData[field], formData);
       if (msg) errors[field] = msg;
     });
-
+ 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setError('Please correct the highlighted fields.');
       return;
     }
-
+ 
     try {
       setSubmitting(true);
       setError(null);
-
+ 
       const bookingItems = (formData.bookingItems || [])
         .filter((item) => !isBookingRowBlank(item))
         .map((item) => ({
@@ -170,7 +170,7 @@ export default function LoadForm() {
           specialHandlingFlags: item.specialHandlingFlags?.trim() || null,
           status: item.status || 'PENDING',
         }));
-
+ 
       const payload = {
         loadCode: formData.loadCode.trim(),
         vehicleID: Number(formData.vehicleId),
@@ -181,7 +181,7 @@ export default function LoadForm() {
         status: formData.status,
         bookingsJSON: bookingItems.length > 0 ? JSON.stringify(bookingItems) : '',
       };
-
+ 
       await createLoad(payload);
       navigate('/routing/load-planning');
     } catch (err) {
@@ -192,21 +192,21 @@ export default function LoadForm() {
       setSubmitting(false);
     }
   };
-
+ 
   return (
     <Layout>
       <div className="fleet-container form-page-container">
         <div className="form-header">
           <h1>Create New Load</h1>
         </div>
-
+ 
         {error && (
           <div className="error-message">
             <span>{error}</span>
             <button onClick={() => setError(null)}>✕</button>
           </div>
         )}
-
+ 
         <form onSubmit={handleSubmit} className="vehicle-form vehicle-form-grid">
           <div className="form-group">
             <label htmlFor="loadCode">Load Code *</label>
@@ -222,7 +222,7 @@ export default function LoadForm() {
             />
             {fieldErrors.loadCode && <span className="field-error">{fieldErrors.loadCode}</span>}
           </div>
-
+ 
           <div className="form-group">
             <label htmlFor="status">Status *</label>
             <select
@@ -237,7 +237,7 @@ export default function LoadForm() {
               <option value="DELIVERED">Delivered</option>
             </select>
           </div>
-
+ 
           <div className="form-group">
             <label htmlFor="vehicleId">Vehicle *</label>
             <select
@@ -261,7 +261,7 @@ export default function LoadForm() {
             )}
             {fieldErrors.vehicleId && <span className="field-error">{fieldErrors.vehicleId}</span>}
           </div>
-
+ 
           <div className="form-group">
             <label htmlFor="totalWeightKg">Total Weight (kg) *</label>
             <input
@@ -277,7 +277,7 @@ export default function LoadForm() {
             />
             {fieldErrors.totalWeightKg && <span className="field-error">{fieldErrors.totalWeightKg}</span>}
           </div>
-
+ 
           <div className="form-group">
             <label htmlFor="totalVolumeM3">Total Volume (m³) *</label>
             <input
@@ -293,7 +293,7 @@ export default function LoadForm() {
             />
             {fieldErrors.totalVolumeM3 && <span className="field-error">{fieldErrors.totalVolumeM3}</span>}
           </div>
-
+ 
           <div className="form-group">
             <label htmlFor="plannedStart">Planned Start</label>
             <input
@@ -305,7 +305,7 @@ export default function LoadForm() {
               onChange={handleChange}
             />
           </div>
-
+ 
           <div className="form-group">
             <label htmlFor="plannedEnd">Planned End</label>
             <input
@@ -318,14 +318,14 @@ export default function LoadForm() {
             />
             {fieldErrors.plannedEnd && <span className="field-error">{fieldErrors.plannedEnd}</span>}
           </div>
-
+ 
           <div className="detail-card bookings-card" style={{ gridColumn: '1 / -1' }}>
             <h3>Bookings</h3>
             <div className="vehicle-availability-header" style={{ marginBottom: '12px' }}>
               <span className="label">Add booking rows</span>
               <button type="button" className="btn-add-inline" onClick={addBookingRow}>+ Add Booking</button>
             </div>
-
+ 
             <div className="booking-table-wrap">
               <table className="booking-mini-table booking-form-table">
                 <thead>
@@ -381,7 +381,7 @@ export default function LoadForm() {
               </table>
             </div>
           </div>
-
+ 
           <div className="form-actions create-form-actions">
             <button
               type="button"
@@ -401,3 +401,5 @@ export default function LoadForm() {
     </Layout>
   );
 }
+ 
+ 

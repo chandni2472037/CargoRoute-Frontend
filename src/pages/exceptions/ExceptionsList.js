@@ -58,9 +58,9 @@ export default function ExceptionsList() {
     setError('');
     getAllExceptions()
       .then(setExceptions)
-      .catch(() => {}
-        
-      )
+      .catch((err) => {
+        setError(err?.response?.data?.message || 'Unable to load exceptions.');
+      })
       .finally(() => setLoading(false));
   }, []);
 

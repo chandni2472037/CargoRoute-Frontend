@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { getAllVehicles } from '../../api/fleetApi';
 import '../../styles/Fleet.css';
-
+ 
 export default function FleetRegistry() {
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState([]);
@@ -21,7 +21,7 @@ export default function FleetRegistry() {
     inUse: 0,
     maintenance: 0,
   });
-
+ 
   const fetchVehicles = useCallback(async () => {
     try {
       setLoading(true);
@@ -43,11 +43,11 @@ export default function FleetRegistry() {
       setLoading(false);
     }
   }, []);
-
+ 
   useEffect(() => {
     fetchVehicles();
   }, [fetchVehicles]);
-
+ 
   useEffect(() => {
     if (vehicles.length > 0) {
       const filtered = vehicles.filter((vehicle) => {
@@ -55,11 +55,11 @@ export default function FleetRegistry() {
           vehicle.regNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
           vehicle.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (vehicle.driver?.name && vehicle.driver.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
+ 
         const matchesStatus =
           filterStatus === 'all' ||
           (vehicle.status && vehicle.status.toLowerCase() === filterStatus.toLowerCase());
-
+ 
         return matchesSearch && matchesStatus;
       });
       setFilteredVehicles(filtered);
@@ -69,34 +69,34 @@ export default function FleetRegistry() {
       setCurrentPage(1);
     }
   }, [searchTerm, filterStatus, vehicles]);
-
+ 
   const sortedVehicles = [...filteredVehicles].sort((a, b) => {
     const aTime = a?.lastMaintenanceAt ? new Date(a.lastMaintenanceAt).getTime() : Number.NaN;
     const bTime = b?.lastMaintenanceAt ? new Date(b.lastMaintenanceAt).getTime() : Number.NaN;
-
+ 
     const aMissing = Number.isNaN(aTime);
     const bMissing = Number.isNaN(bTime);
     if (aMissing && bMissing) return 0;
     if (aMissing) return 1;
     if (bMissing) return -1;
-
+ 
     if (maintenanceSort === 'latest') return bTime - aTime;
     if (maintenanceSort === 'earliest') return aTime - bTime;
-
+ 
     return 0;
   });
-
+ 
   const totalPages = Math.max(1, Math.ceil(sortedVehicles.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedVehicles = sortedVehicles.slice(startIndex, endIndex);
-
+ 
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
-
+ 
   const calculateStats = (vehicleList) => {
     const stats = {
       total: vehicleList.length,
@@ -106,15 +106,15 @@ export default function FleetRegistry() {
     };
     setStats(stats);
   };
-
+ 
   const handleAddVehicle = () => {
     navigate('/fleet/vehicles/new');
   };
-
+ 
   const handleViewVehicle = (vehicleId) => {
     navigate(`/fleet/vehicles/${vehicleId}`);
   };
-
+ 
   const getStatusBadgeClass = (status) => {
     const upperStatus = status?.toUpperCase() || 'UNKNOWN';
     if (upperStatus === 'ACTIVE') return 'status-available';
@@ -122,7 +122,7 @@ export default function FleetRegistry() {
     if (upperStatus === 'MAINTENANCE') return 'status-maintenance';
     return 'status-unknown';
   };
-
+ 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -131,7 +131,7 @@ export default function FleetRegistry() {
       day: 'numeric',
     });
   };
-
+ 
   const downloadTextFile = (content, fileName, mimeType) => {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -143,9 +143,9 @@ export default function FleetRegistry() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-
+ 
   const escapeCsv = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-
+ 
   const exportVehicles = (format) => {
     const fileDate = new Date().toISOString().slice(0, 10);
     const headers = [
@@ -157,7 +157,7 @@ export default function FleetRegistry() {
       'Last Maintenance',
       'Status',
     ];
-
+ 
     const rows = sortedVehicles.map((vehicle) => [
       vehicle.regNumber || '',
       vehicle.type || '',
@@ -167,25 +167,25 @@ export default function FleetRegistry() {
       formatDate(vehicle.lastMaintenanceAt),
       vehicle.status || 'Unknown',
     ]);
-
+ 
     if (format === 'excel') {
       const tsv = [
         headers.join('\t'),
         ...rows.map((row) => row.map((cell) => String(cell ?? '').replace(/\t/g, ' ')).join('\t')),
       ].join('\n');
-
+ 
       downloadTextFile(`\ufeff${tsv}`, `vehicles-${fileDate}.xls`, 'application/vnd.ms-excel;charset=utf-8;');
       return;
     }
-
+ 
     const csv = [
       headers.map(escapeCsv).join(','),
       ...rows.map((row) => row.map(escapeCsv).join(',')),
     ].join('\n');
-
+ 
     downloadTextFile(`\ufeff${csv}`, `vehicles-${fileDate}.csv`, 'text/csv;charset=utf-8;');
   };
-
+ 
   if (loading) {
     return (
       <Layout>
@@ -195,7 +195,7 @@ export default function FleetRegistry() {
       </Layout>
     );
   }
-
+ 
   return (
     <Layout>
       <div className="fleet-container fleet-registry-page">
@@ -208,7 +208,7 @@ export default function FleetRegistry() {
           +
         </button>
       </div>
-
+ 
       <div className="fleet-stats">
   {/* TOTAL */}
   <div className="stat-card stat-card-total">
@@ -217,7 +217,7 @@ export default function FleetRegistry() {
       <span className="stat-value stat-value-total">{stats.total}</span>
     </div>
   </div>
-
+ 
   {/* UNAVAILABLE - Uses Red/Orange theme from CSS */}
   <div className="stat-card stat-card-unavailable">
     <div className="stat-summary">
@@ -225,7 +225,7 @@ export default function FleetRegistry() {
       <span className="stat-value stat-value-unavailable">{stats.unavailable}</span>
     </div>
   </div>
-
+ 
   {/* IN USE - Uses Blue theme from CSS */}
   <div className="stat-card stat-card-inuse">
     <div className="stat-summary">
@@ -233,7 +233,7 @@ export default function FleetRegistry() {
       <span className="stat-value stat-value-inuse">{stats.inUse}</span>
     </div>
   </div>
-
+ 
   {/* MAINTENANCE - Uses Amber theme from CSS */}
   <div className="stat-card stat-card-maintenance">
     <div className="stat-summary">
@@ -242,13 +242,13 @@ export default function FleetRegistry() {
     </div>
   </div>
 </div>
-
+ 
       {error && (
         <div className="alert alert-error">
           <span>⚠</span> {error}
         </div>
       )}
-
+ 
       <div className="fleet-vehicles-section">
         <div className="fleet-filters-section">
           <h2 className="fleet-filter-title">All Vehicles</h2>
@@ -270,7 +270,7 @@ export default function FleetRegistry() {
               <option value="unavailable">Unavailable</option>
               <option value="maintenance">Maintenance</option>
             </select>
-
+ 
             <details className="export-menu">
               <summary className="export-btn" aria-label="Export vehicle table">
                 Export
@@ -283,7 +283,7 @@ export default function FleetRegistry() {
             </details>
           </div>
         </div>
-
+ 
         {filteredVehicles.length === 0 ? (
           <div className="no-vehicles">
             <p>No vehicles found</p>
@@ -347,21 +347,29 @@ export default function FleetRegistry() {
                           {vehicle.status || 'Unknown'}
                         </span>
                       </td>
-                      <td className="actions">
-                        <button
-                          className="action-btn view-btn"
-                          onClick={() => handleViewVehicle(vehicle.vehicleID)}
-                          aria-label="View"
-                        >
-                          ⋯
-                        </button>
-                      </td>
+                        <td className="actions">
+                          <button
+                            className="action-btn view-btn"
+                            onClick={() => handleViewVehicle(vehicle.vehicleID)}
+                            aria-label="View"
+                          >
+                            ⋯
+                          </button>
+                          <button
+                            className="action-btn edit-btn"
+                            onClick={() => navigate(`/fleet/vehicles/${vehicle.vehicleID}/edit`)}
+                            aria-label="Edit"
+                            style={{ marginLeft: '8px' }}
+                          >
+                            ✎
+                          </button>
+                        </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
+ 
             <div className="pagination-container">
               <div className="pagination-info">
                 Showing {sortedVehicles.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, sortedVehicles.length)} of {sortedVehicles.length}
@@ -375,7 +383,7 @@ export default function FleetRegistry() {
                 >
                   Prev
                 </button>
-
+ 
                 {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
                   <button
                     key={page}
@@ -386,7 +394,7 @@ export default function FleetRegistry() {
                     {page}
                   </button>
                 ))}
-
+ 
                 <button
                   type="button"
                   className="page-btn"

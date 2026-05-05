@@ -5,7 +5,7 @@ import { getRouteById, deleteRoute } from '../../api/routingApi';
 import { FiEdit2 } from 'react-icons/fi';
 import ConfirmModal from '../../components/ConfirmModal';
 import '../../styles/Routing.css';
-
+ 
 export default function RouteDetailsView() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export default function RouteDetailsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false });
-
+ 
   const fetchRoute = useCallback(async () => {
     try {
       setLoading(true);
@@ -27,11 +27,11 @@ export default function RouteDetailsView() {
       setLoading(false);
     }
   }, [id]);
-
+ 
   useEffect(() => {
     fetchRoute();
   }, [fetchRoute]);
-
+ 
   const handleDeleteRoute = async () => {
     if (!route?.routeID) return;
     try {
@@ -42,7 +42,7 @@ export default function RouteDetailsView() {
       setError('Failed to delete route. Please try again.');
     }
   };
-
+ 
   const getStatusClass = (status) => {
     const upperStatus = status?.toUpperCase() || 'UNKNOWN';
     if (upperStatus === 'PLANNED') return 'status-planned';
@@ -50,7 +50,7 @@ export default function RouteDetailsView() {
     if (upperStatus === 'COMPLETED') return 'status-completed';
     return 'status-unknown';
   };
-
+ 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not specified';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -59,7 +59,7 @@ export default function RouteDetailsView() {
       day: 'numeric',
     });
   };
-
+ 
   if (loading) {
     return (
       <Layout>
@@ -69,7 +69,7 @@ export default function RouteDetailsView() {
       </Layout>
     );
   }
-
+ 
   if (error || !route) {
     return (
       <Layout>
@@ -82,7 +82,7 @@ export default function RouteDetailsView() {
       </Layout>
     );
   }
-
+ 
   return (
     <Layout>
       <div className="routing-container">
@@ -115,7 +115,7 @@ export default function RouteDetailsView() {
             </button>
           </div>
         </div>
-
+ 
         <div className="detail-cards">
           <div className="detail-card info-card">
             <h3>Route Information</h3>
@@ -134,7 +134,7 @@ export default function RouteDetailsView() {
               <span className="value">{route.routeID}</span>
             </div>
           </div>
-
+ 
           <div className="detail-card distance-card">
             <h3>Distance & Duration</h3>
             <div className="detail-row">
@@ -146,7 +146,7 @@ export default function RouteDetailsView() {
               <span className="value">{route.estimatedDurationMin || '-'} minutes</span>
             </div>
           </div>
-
+ 
           <div className="detail-card cost-card">
             <h3>Cost Estimate</h3>
             <div className="detail-row">
@@ -154,7 +154,7 @@ export default function RouteDetailsView() {
               <span className="value cost-highlight">₹ {route.costEstimate ? route.costEstimate.toFixed(2) : '-'}</span>
             </div>
           </div>
-
+ 
           <div className="detail-card load-card">
             <h3>Load Details</h3>
             <div className="detail-row">
@@ -187,3 +187,5 @@ export default function RouteDetailsView() {
     </Layout>
   );
 }
+ 
+ 
